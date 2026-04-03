@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+.env
+encodings/*.pkl
+data/logs.db
