@@ -1,1 +1,0 @@
-ASSISTANT_NAME = "gim-see"
