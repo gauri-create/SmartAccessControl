@@ -1,17 +1,9 @@
-<!doctype html>
-<html>
-<head>
-  <title>Register User</title>
-</head>
-<body>
+<form method="POST">
+    <input name="username" placeholder="Username (unique)" required>
+    <input name="name" placeholder="Full Name" required>
+    <input name="password" type="password" placeholder="Password" required>
 
-<h2>Add New Person</h2>
+    <input name="role" placeholder="Role (hr/security/anything)" required>
 
-<form method="POST" enctype="multipart/form-data">
-  <input type="text" name="name" placeholder="Enter Name" required><br><br>
-  <input type="file" name="image" required><br><br>
-  <button type="submit">Register</button>
+    <button type="submit">Create User</button>
 </form>
-
-</body>
-</html>

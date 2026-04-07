@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HR Panel</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h2>HR - User Management</h2>
+
+<a href="/register"><button>Add User</button></a>
+
+<table>
+<tr>
+<th>User</th>
+<th>Role</th>
+<th>Status</th>
+</tr>
+
+{% for u in users %}
+<tr>
+<td>{{ u.username }}</td>
+<td>{{ u.role }}</td>
+<td>{{ u.status }}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+</body>
+</html>

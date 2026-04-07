@@ -1,133 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <title>Secure Eye Dashboard</title>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: white;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-
-    h1 {
-      margin-top: 20px;
-    }
-
-    h2 {
-      margin-bottom: 10px;
-      color: #ccc;
-    }
-
-    table {
-      margin: auto;
-      border-collapse: collapse;
-      width: 85%;
-      margin-top: 20px;
-    }
-
-    th, td {
-      border: 1px solid #555;
-      padding: 12px;
-      text-align: center;
-    }
-
-    th {
-      background: #222;
-    }
-
-    tr:hover {
-      background-color: #333;
-    }
-
-    img {
-      border-radius: 6px;
-    }
-
-    /* Row styles */
-    .ENTRY { background: #1a1a1a; }
-    .EXIT { background: #001f3f; }
-    .ALERT { background: #5a0000; }
-  </style>
+    <title>SentriCore</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
+<body class="center">
 
-<body>
+<h1>SentriCore</h1>
 
-  <h1>🔐 SECURE EYE DASHBOARD</h1>
+<p>AI Powered Secure Entry System</p>
+<p>Face Recognition • Access Control • Live Monitoring</p>
 
-  <!-- ---------------- UNKNOWN ALERT ---------------- -->
-  <h2>🚨 Latest Unknown Detection</h2>
-
-  {% if latest_unknown %}
-    <img src="{{ url_for('static', filename='unknown_faces/' + latest_unknown) }}" width="300">
-  {% else %}
-    <p>No unknown faces detected</p>
-  {% endif %}
-
-  <!-- ---------------- FILTER ---------------- -->
-  <form method="get" style="margin: 20px 0;">
-    
-    <input 
-      type="text"
-      name="name"
-      placeholder="Search by name"
-      value="{{ request.args.get('name', '') }}"
-      style="padding:8px; width:200px;"
-    >
-
-    <select name="status" style="padding:8px;">
-      <option value="">ALL</option>
-      <option value="ENTRY" {% if request.args.get('status') == 'ENTRY' %}selected{% endif %}>ENTRY</option>
-      <option value="EXIT" {% if request.args.get('status') == 'EXIT' %}selected{% endif %}>EXIT</option>
-      <option value="ALERT" {% if request.args.get('status') == 'ALERT' %}selected{% endif %}>ALERT</option>
-    </select>
-    
-    <button type="submit" style="padding:8px;">Filter</button>
-
-  </form>
-
-  <!-- ---------------- TABLE ---------------- -->
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Status</th>
-        <th>Timestamp</th>
-        <th>Image</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {% if logs %}
-        {% for log in logs %}
-          <tr class="{{ log[1] }}">
-            <td>{{ log[0] }}</td>
-            <td>{{ log[1] }}</td>
-            <td>{{ log[2] }}</td>
-
-            <td>
-              {% if log[3] %}
-                <img 
-                  src="{{ url_for('static', filename=( 'unknown_faces/' if log[0] == 'Unknown' else 'captures/' ) + log[3]) }}" 
-                  width="60"
-                >
-              {% else %}
-                -
-              {% endif %}
-            </td>
-
-          </tr>
-        {% endfor %}
-      {% else %}
-        <tr>
-          <td colspan="4">No records found</td>
-        </tr>
-      {% endif %}
-    </tbody>
-  </table>
+<a href="/login">
+    <button>Login</button>
+</a>
 
 </body>
 </html>

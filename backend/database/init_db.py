@@ -1,29 +1,42 @@
 import sqlite3
 import os
 
-DB_PATH = "backend/database/attendance.db"
+DB = "backend/database/attendance.db"
 
-def init_db(reset=False):
-    # ⚠️ Optional reset (only when you WANT to wipe data)
-    if reset and os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-        print("Old database deleted.")
+def init_db():
+    conn = sqlite3.connect(DB)
+    cur = conn.cursor()
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    # ---------------- USERS TABLE ----------------
-    cursor.execute("""
+    # =========================
+    # USERS TABLE (AUTH SYSTEM)
+    # =========================
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
-        image TEXT,
-        encoding BLOB
+        password TEXT NOT NULL,
+        role TEXT NOT NULL,
+        status TEXT DEFAULT 'active'
     )
     """)
 
-    # ---------------- LOGS TABLE ----------------
-    cursor.execute("""
+    # =========================
+    # FACE DATA TABLE
+    # =========================
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS face_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        encoding BLOB NOT NULL,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+    """)
+
+    # =========================
+    # LOGS TABLE (ATTENDANCE)
+    # =========================
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
@@ -33,12 +46,23 @@ def init_db(reset=False):
     )
     """)
 
+    # =========================
+    # DEFAULT OWNER (ONLY ONCE)
+    # =========================
+    cur.execute("SELECT id FROM users WHERE username = ?", ("admin",))
+    owner = cur.fetchone()
+
+    if not owner:
+        cur.execute("""
+        INSERT INTO users (username, name, password, role, status)
+        VALUES (?, ?, ?, ?, ?)
+        """, ("admin", "System Admin", "admin@123", "owner", "active"))
+
+        print("[DB] Owner account created")
+
     conn.commit()
     conn.close()
 
-    print("Database initialized successfully.")
-
 
 if __name__ == "__main__":
-    # ⚠️ Change to True ONLY if you want to wipe everything
-    init_db(reset=False)
+    init_db()

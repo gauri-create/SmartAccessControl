@@ -1,16 +1,22 @@
+import sqlite3
 from datetime import datetime
-from backend.database.db import get_connection
+
+DB_PATH = "backend/database/attendance.db"
+
 
 def log_to_db(name, status, image):
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    cur = conn.cursor()
 
-    timestamp= datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    cursor.execute(""" 
-        INSERT  INTO logs(name,status, timestamp, image)
-        VALUES(?,?,?,?)
-    """, (name, status, timestamp, image))
+    cur.execute("""
+        INSERT INTO logs (name, status, timestamp, image)
+        VALUES (?, ?, ?, ?)
+    """, (
+        name,
+        status,
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        image
+    ))
 
     conn.commit()
-    conn.close
+    conn.close()

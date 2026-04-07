@@ -1,0 +1,18 @@
+<h1>Edit User</h1>
+
+<form method="POST">
+
+  Name: <input name="name" value="{{ user[1] }}"><br><br>
+
+  Status:
+  <select name="access_status">
+    <option value="active" {% if user[2]=='active' %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if user[2]=='inactive' %}selected{% endif %}>Inactive</option>
+  </select>
+
+  <br><br>
+  <button type="submit">Update</button>
+
+</form>
+
+<a href="/users">Back</a>
