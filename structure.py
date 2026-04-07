@@ -27,7 +27,6 @@ C:.
 ¦   ¦           temp.cpython-310.pyc
 ¦   ¦           
 ¦   +---static
-¦   ¦   ¦   sentricore_logo.jpg
 ¦   ¦   ¦   style.css
 ¦   ¦   ¦   
 ¦   ¦   +---captures
@@ -45,12 +44,15 @@ C:.
 ¦   ¦           Unknown_20260404_233721.jpg
 ¦   ¦           
 ¦   +---templates
+¦   ¦       admin.html
 ¦   ¦       edit_user.html
 ¦   ¦       hr.html
 ¦   ¦       index.html
+¦   ¦       index_logs.html
 ¦   ¦       login.html
 ¦   ¦       owner.html
 ¦   ¦       register.html
+¦   ¦       users.html
 ¦   ¦       
 ¦   +---utils
 ¦   ¦   ¦   cooldown.py

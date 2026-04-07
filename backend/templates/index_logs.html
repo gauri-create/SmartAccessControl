@@ -1,35 +1,260 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Logs</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <title>SentriCore | Surveillance Logs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f4;
+            min-height: 100vh;
+            color: #1a1a1a;
+        }
+
+        /* ── Top Navigation Bar ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            padding: 0 24px;
+            height: 52px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            text-decoration: none;
+            margin-right: 32px;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            background: #1a1a2e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .logo-icon img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+        }
+
+        .topbar nav {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .nav-item {
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 7px;
+            color: #666;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .nav-item:hover {
+            background: #f0f0ef;
+            color: #1a1a1a;
+        }
+
+        .nav-item.active {
+            background: #f0f0ef;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .nav-item.logout {
+            margin-left: auto;
+            color: #c0392b;
+        }
+
+        .nav-item.logout:hover {
+            background: #fdf0ef;
+        }
+
+        /* ── Page Content ── */
+        .main-content {
+            padding: 28px 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .content-header {
+            margin-bottom: 20px;
+        }
+
+        .content-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .content-header p {
+            font-size: 13px;
+            color: #888;
+        }
+
+        /* ── Data Table ── */
+        .table-wrap {
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .data-table thead tr {
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 10px 16px;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #999;
+            background: #fafafa;
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            color: #1a1a1a;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tbody tr:hover td {
+            background: #fafafa;
+        }
+
+        .data-table td .timestamp {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* ── Status Badges ── */
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 3px 9px;
+            border-radius: 99px;
+        }
+
+        .badge.authorized { background: #e6f4ed; color: #1a7a46; }
+        .badge.flagged    { background: #fdf0ef; color: #c0392b; }
+        .badge.unknown    { background: #fff7e6; color: #b45309; }
+
+        /* ── Evidence Links ── */
+        .view-btn {
+            font-size: 12px;
+            color: #2563eb;
+            text-decoration: none;
+            padding: 3px 8px;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+        }
+
+        .view-btn:hover {
+            background: #eff6ff;
+        }
+
+        .no-img {
+            font-size: 12px;
+            color: #bbb;
+        }
+    </style>
 </head>
 <body>
 
-<h2>Security Logs</h2>
+    <!-- Top Navigation -->
+    <div class="topbar">
+        <a href="/logs" class="topbar-logo">
+            <div class="logo-icon">
+                <img src="{{ url_for('static', filename='sentricore_logo.jpg') }}" alt="SentriCore">
+            </div>
+            SentriCore
+        </a>
+        <nav>
+            <a href="/logs" class="nav-item active">Live Logs</a>
+            {% if session['role'] in ['hr', 'owner'] %}
+            <a href="/hr" class="nav-item">Personnel</a>
+            {% endif %}
+            <a href="/logout" class="nav-item logout">Logout</a>
+        </nav>
+    </div>
 
-<table>
-<tr>
-<th>Name</th>
-<th>Status</th>
-<th>Time</th>
-<th>Image</th>
-</tr>
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="content-header">
+            <h2>Activity Logs</h2>
+            <p>Real-time surveillance data from across the organization.</p>
+        </header>
 
-{% for log in logs %}
-<tr>
-<td>{{ log.name }}</td>
-<td>{{ log.status }}</td>
-<td>{{ log.timestamp }}</td>
-<td>
-{% if log.image %}
-<img src="/{{ log.image }}" width="80">
-{% endif %}
-</td>
-</tr>
-{% endfor %}
-
-</table>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Identity</th>
+                        <th>Status</th>
+                        <th>Confidence</th>
+                        <th>Cam ID</th>
+                        <th>Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr class="log-row {{ log.status.lower() }}">
+                        <td><span class="timestamp">{{ log.timestamp }}</span></td>
+                        <td><strong>{{ log.name }}</strong></td>
+                        <td><span class="badge {{ log.status.lower() }}">{{ log.status }}</span></td>
+                        <td>{{ (log.confidence * 100) | round(1) }}%</td>
+                        <td>#{{ log.camera_id }}</td>
+                        <td>
+                            {% if log.image_path %}
+                            <a href="{{ url_for('static', filename=log.image_path) }}" target="_blank" class="view-btn">View Capture</a>
+                            {% else %}
+                            <span class="no-img">No Image</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
 
 </body>
 </html>

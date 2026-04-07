@@ -1,14 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Owner Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentriCore | Owner Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="dashboard-page">
 
-<h1>Owner Control Panel</h1>
+    <header class="dashboard-header">
+        <div class="header-content">
+            <img src="{{ url_for('static', filename='sentricore_logo.jpg') }}" alt="Logo" class="small-logo">
+            <h1>Owner Command Center</h1>
+            <p>System-wide Administrative Control</p>
+        </div>
+        <div class="header-actions">
+            <a href="/" class="nav-link">Main Site</a>
+            <a href="/logout" class="logout-link">Secure Logout</a>
+        </div>
+    </header>
 
-<a href="/hr"><button>HR Panel</button></a>
-<a href="/logs"><button>Security Logs</button></a>
+    <main class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-icon">👥</div>
+            <h3>HR Management</h3>
+            <p>Register new employees, modify roles, and manage system access status.</p>
+            <a href="/hr" class="btn-primary">Open HR Panel</a>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-icon">🛡️</div>
+            <h3>Security Logs</h3>
+            <p>Review real-time entry logs, timestamps, and AI face recognition history.</p>
+            <a href="/logs" class="btn-primary">View Access Logs</a>
+        </div>
+        
+        <div class="dashboard-card status-card">
+            <div class="card-icon">⚙️</div>
+            <h3>System Status</h3>
+            <div class="status-indicator">
+                <span class="dot pulse-green"></span>
+                <span class="status-text">AI Core: Operational</span>
+            </div>
+            <p>All database connections and surveillance streams are stable.</p>
+            <div class="system-meta">
+                <small>Storage: SQLite3 (Local)</small><br>
+                <small>Mode: AI-Surveillance (SentriCore v1.0)</small>
+            </div>
+        </div>
+    </main>
+
+    <footer class="dashboard-footer">
+        <p>SentriCore Command v1.0 | Nagpur AI Lab Division</p>
+    </footer>
 
 </body>
 </html>

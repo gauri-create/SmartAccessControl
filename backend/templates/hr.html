@@ -1,31 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>HR Panel</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentriCore | HR Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="admin-page">
 
-<h2>HR - User Management</h2>
+    <header class="panel-header">
+        <div class="header-left">
+            <h2>HR - User Management</h2>
+            <p>Administering <strong>{{ users|length }}</strong> system profiles</p>
+        </div>
+        <div class="header-right">
+            <a href="/register" class="btn-primary">+ Add New User</a>
+            <a href="/owner" class="btn-outline">Dashboard</a>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </header>
 
-<a href="/register"><button>Add User</button></a>
+    <div class="table-container">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td><code>{{ u.username }}</code></td>
+                    <td>{{ u.name }}</td>
+                    <td><span class="role-badge">{{ u.role.upper() }}</span></td>
+                    <td>
+                        <span class="status-indicator-text status-{{ u.status }}">
+                            ● {{ u.status.capitalize() }}
+                        </span>
+                    </td>
+                    <td class="action-cells">
+                        <a href="/update_user/{{ u.id }}" class="btn-edit">Edit</a>
 
-<table>
-<tr>
-<th>User</th>
-<th>Role</th>
-<th>Status</th>
-</tr>
+                        {% if u.role != 'owner' %}
+                            <a href="/toggle/{{ u.id }}" class="btn-toggle {{ 'btn-deactivate' if u.status == 'active' else 'btn-activate' }}">
+                                {{ 'Deactivate' if u.status == 'active' else 'Activate' }}
+                            </a>
+                        {% else %}
+                            <span class="btn-disabled" title="Owner accounts cannot be toggled here">Protected</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-{% for u in users %}
-<tr>
-<td>{{ u.username }}</td>
-<td>{{ u.role }}</td>
-<td>{{ u.status }}</td>
-</tr>
-{% endfor %}
-
-</table>
+    <footer class="panel-footer">
+        <p>&copy; 2026 SentriCore AI Surveillance System | Nagpur Division</p>
+    </footer>
 
 </body>
 </html>

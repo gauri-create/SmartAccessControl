@@ -1,18 +1,62 @@
-<h1>Edit User</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SentriCore | Modify Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
 
-<form method="POST">
+    <div class="login-container">
+        <div class="login-header">
+            <img src="{{ url_for('static', filename='sentricore_logo.jpg') }}" alt="Logo" class="small-logo">
+            <h2>Modify Profile</h2>
+            <p>Updating access for: <strong>{{ user.username }}</strong></p>
+        </div>
 
-  Name: <input name="name" value="{{ user[1] }}"><br><br>
+        <form action="/update_user/{{ user.id }}" method="POST" class="auth-form" enctype="multipart/form-data">
+            
+            <div class="input-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" name="name" value="{{ user.name }}" required>
+            </div>
 
-  Status:
-  <select name="access_status">
-    <option value="active" {% if user[2]=='active' %}selected{% endif %}>Active</option>
-    <option value="inactive" {% if user[2]=='inactive' %}selected{% endif %}>Inactive</option>
-  </select>
+            <div class="input-group">
+                <label class="form-label">Update Password</label>
+                <input type="password" name="password" placeholder="Leave blank to keep current">
+            </div>
 
-  <br><br>
-  <button type="submit">Update</button>
+            <div class="input-group">
+                <label class="form-label">Re-train Face Model</label>
+                <input type="file" name="face_image" accept="image/*">
+                <small style="color: #a0c4ff; display: block; margin-top: 5px;">Upload a new photo only if facial recognition is failing.</small>
+            </div>
 
-</form>
+            <div class="input-group">
+                <label class="form-label">Assign System Role</label>
+                <select name="role" class="styled-select">
+                    <option value="employee" {% if user.role == 'employee' %}selected{% endif %}>Employee</option>
+                    <option value="security" {% if user.role == 'security' %}selected{% endif %}>Security</option>
+                    <option value="hr" {% if user.role == 'hr' %}selected{% endif %}>HR</option>
+                    <option value="owner" {% if user.role == 'owner' %}selected{% endif %}>Owner</option>
+                </select>
+            </div>
 
-<a href="/users">Back</a>
+            <div class="input-group">
+                <label class="form-label">Account Status</label>
+                <select name="status" class="styled-select">
+                    <option value="active" {% if user.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if user.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-primary full-width">Commit Changes</button>
+            
+            <div class="login-footer">
+                <a href="/hr" class="back-link">Cancel & Return</a>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>

@@ -1,22 +1,21 @@
 import sqlite3
-from datetime import datetime
 
 DB_PATH = "backend/database/attendance.db"
 
-
-def log_to_db(name, status, image):
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    cur = conn.cursor()
-
-    cur.execute("""
-        INSERT INTO logs (name, status, timestamp, image)
-        VALUES (?, ?, ?, ?)
-    """, (
-        name,
-        status,
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        image
-    ))
-
-    conn.commit()
-    conn.close()
+def log_to_db(name, status, image_path="", confidence=0.0):
+    """Logs activity to the database with camera and confidence info."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # camera_id defaults to 1 for your current setup
+        cursor.execute("""
+            INSERT INTO logs (name, status, image_path, confidence, camera_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (name, status, image_path, float(confidence), 1))
+        
+        conn.commit()
+        conn.close()
+        print(f"[LOG] {status}: {name} ({round(confidence*100, 2)}%)")
+    except Exception as e:
+        print(f"[ERROR] Logging failed: {e}")

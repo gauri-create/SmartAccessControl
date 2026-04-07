@@ -1,18 +1,34 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Login</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <title>SentriCore | Secure Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="center">
+<body class="auth-page">
 
-<h2>Login</h2>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="{{ url_for('static', filename='sentricore_logo.jpg') }}" alt="Logo" class="small-logo">
+            <h2>System Authentication</h2>
+            <p>Enter credentials to access the surveillance core.</p>
+        </div>
 
-<form method="POST">
-    <input name="username" placeholder="Username"><br>
-    <input name="password" type="password" placeholder="Password"><br>
-    <button type="submit">Login</button>
-</form>
+        <form method="POST" class="auth-form">
+            <div class="input-group">
+                <input name="username" type="text" placeholder="Username" required autocomplete="off">
+            </div>
+            <div class="input-group">
+                <input name="password" type="password" placeholder="Password" required>
+            </div>
+            
+            <button type="submit" class="btn-primary full-width">Initialize Session</button>
+        </form>
+
+        <div class="login-footer">
+            <a href="/" class="back-link">← Return to Home</a>
+        </div>
+    </div>
 
 </body>
 </html>

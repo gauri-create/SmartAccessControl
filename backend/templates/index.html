@@ -1,19 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>SentriCore</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <title>SentriCore | AI Surveillance</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="center">
+<body class="landing-page">
 
-<h1>SentriCore</h1>
+    <div class="hero-container">
+        <img src="{{ url_for('static', filename='sentricore_logo.jpg') }}" alt="SentriCore Logo" class="main-logo">
+        
+        <h1>SentriCore</h1>
+        <p class="tagline">Next-Generation AI Powered Surveillance & Secure Entry</p>
+        
+        <div class="cta-buttons">
+            <a href="/login" class="btn-primary">Enterprise Login</a>
+        </div>
+    </div>
 
-<p>AI Powered Secure Entry System</p>
-<p>Face Recognition • Access Control • Live Monitoring</p>
-
-<a href="/login">
-    <button>Login</button>
-</a>
+    <section class="info-section">
+        <div class="card">
+            <h3>Face Recognition</h3>
+            <p>Real-time identity verification using deep learning CNN models to ensure only authorized personnel enter.</p>
+        </div>
+        <div class="card">
+            <h3>Live Monitoring</h3>
+            <p>Constant stream analysis with automated logging of every entry and exit for total transparency.</p>
+        </div>
+        <div class="card">
+            <h3>Access Control</h3>
+            <p>Role-based permissions for Security, HR, and Owners to manage facility security from any device.</p>
+        </div>
+    </section>
 
 </body>
 </html>
