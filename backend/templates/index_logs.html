@@ -2,212 +2,384 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SentriCore | Surveillance Logs</title>
+    <title>SentriCore | Live Feed</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f5f4;
-            min-height: 100vh;
-            color: #1a1a1a;
-        }
-
-        /* ── Top Navigation Bar ── */
+        /* ── TOPBAR ── */
         .topbar {
+            background: #0a1f33;
+            border-bottom: 2px solid #00d2ff;
+            padding: 0 32px;
+            height: 56px;
             display: flex;
             align-items: center;
-            background: #ffffff;
-            border-bottom: 1px solid rgba(0,0,0,0.08);
-            padding: 0 24px;
-            height: 52px;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .topbar-logo {
+        .topbar-brand {
             display: flex;
             align-items: center;
-            gap: 9px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #1a1a1a;
+            gap: 10px;
             text-decoration: none;
-            margin-right: 32px;
+            margin-right: 36px;
         }
 
-        .logo-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 7px;
-            background: #1a1a2e;
+        .brand-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 2px solid #00d2ff;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
+            background: #030d1a;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
         }
 
-        .logo-icon img {
-            width: 18px;
-            height: 18px;
-            object-fit: contain;
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .brand-name {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #00d2ff;
+            text-transform: uppercase;
         }
 
         .topbar nav {
             display: flex;
             align-items: center;
-            gap: 2px;
+            gap: 4px;
             flex: 1;
         }
 
         .nav-item {
             font-size: 13px;
-            padding: 6px 12px;
-            border-radius: 7px;
-            color: #666;
+            padding: 6px 14px;
+            border-radius: 4px;
+            color: #a0c4ff;
             text-decoration: none;
-            transition: background 0.15s, color 0.15s;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
         }
 
         .nav-item:hover {
-            background: #f0f0ef;
-            color: #1a1a1a;
+            background: rgba(0, 210, 255, 0.08);
+            color: #00d2ff;
         }
 
         .nav-item.active {
-            background: #f0f0ef;
-            color: #1a1a1a;
-            font-weight: 500;
+            background: rgba(0, 210, 255, 0.12);
+            color: #00d2ff;
+            font-weight: 600;
+            border-bottom: 2px solid #00d2ff;
+            border-radius: 4px 4px 0 0;
         }
 
         .nav-item.logout {
             margin-left: auto;
-            color: #c0392b;
+            color: #f44336;
+            border: 1px solid #f44336;
+            border-radius: 4px;
+            padding: 5px 14px;
         }
 
         .nav-item.logout:hover {
-            background: #fdf0ef;
+            background: #f44336;
+            color: white;
         }
 
-        /* ── Page Content ── */
-        .main-content {
-            padding: 28px 24px;
-            max-width: 1200px;
+        /* ── PAGE WRAPPER ── */
+        .page {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px 40px;
+        }
+
+        /* ── LIVE MONITOR ── */
+        .monitor-section {
+            background: #0a1f33;
+            border: 2px solid #00d2ff;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .monitor-header {
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+        }
+
+        .monitor-header h2 {
+            color: #00d2ff;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #f44336;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #f44336;
+            animation: pulse-red 1.5s infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse-red {
+            0%   { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+            70%  { box-shadow: 0 0 0 8px rgba(244, 67, 54, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+        }
+
+        .cam-label {
+            margin-left: auto;
+            font-size: 11px;
+            color: #6a89cc;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+
+        /* Video Feed */
+        .video-container {
+            position: relative;
+            background: #000;
+            max-width: 720px;
             margin: 0 auto;
         }
 
-        .content-header {
-            margin-bottom: 20px;
+        .corner-tag {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            z-index: 20;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #f44336;
+            opacity: 0.85;
+            font-family: 'Courier New', monospace;
         }
 
-        .content-header h2 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 4px;
+        .corner-tag-r {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            z-index: 20;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #00d2ff;
+            opacity: 0.8;
+            font-family: 'Courier New', monospace;
         }
 
-        .content-header p {
+        .scanner-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, transparent, #00d2ff, transparent);
+            box-shadow: 0 0 15px #00d2ff;
+            z-index: 10;
+            animation: scan-move 4s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scan-move {
+            0%   { top: 0%; }
+            50%  { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        #video {
+            width: 100%;
+            display: block;
+            height: auto;
+            min-height: 280px;
+            background: #000;
+            transform: rotateY(180deg); /* Mirror for natural webcam feel */
+        }
+
+        /* Status Panel */
+        .status-panel {
+            background: rgba(3, 13, 26, 0.9);
+            padding: 12px 20px;
+            border-top: 1px solid #1a3a5a;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-panel p {
             font-size: 13px;
-            color: #888;
+            color: #a0c4ff;
+            margin: 0;
         }
 
-        /* ── Data Table ── */
-        .table-wrap {
-            background: #ffffff;
-            border: 1px solid rgba(0,0,0,0.08);
-            border-radius: 10px;
-            overflow: hidden;
+        #user-identity {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4CAF50;
         }
 
-        .data-table {
+        .sys-label {
+            margin-left: auto;
+            font-size: 11px;
+            color: #1a3a5a;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* ── LOGS TABLE SECTION ── */
+        .table-section {
+            margin-top: 10px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #1a3a5a;
+        }
+
+        .section-header h3 {
+            color: #00d2ff;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .entry-count {
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            color: #00d2ff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+
+        /* Table */
+        .logs-table {
             width: 100%;
             border-collapse: collapse;
+            color: #ffffff;
+        }
+
+        .logs-table th {
+            background: #1a3a5a;
+            color: #00d2ff;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 13px 16px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .logs-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             font-size: 13px;
         }
 
-        .data-table thead tr {
-            border-bottom: 1px solid rgba(0,0,0,0.08);
-        }
-
-        .data-table th {
-            text-align: left;
-            padding: 10px 16px;
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            color: #999;
-            background: #fafafa;
-        }
-
-        .data-table td {
-            padding: 12px 16px;
-            color: #1a1a1a;
-            border-bottom: 1px solid rgba(0,0,0,0.06);
-        }
-
-        .data-table tbody tr:last-child td {
+        .logs-table tbody tr:last-child td {
             border-bottom: none;
         }
 
-        .data-table tbody tr:hover td {
-            background: #fafafa;
+        .logs-table tbody tr:hover td {
+            background: rgba(0, 210, 255, 0.04);
         }
 
-        .data-table td .timestamp {
-            font-family: 'SFMono-Regular', Consolas, monospace;
+        .logs-table .ts {
+            font-family: 'Courier New', monospace;
             font-size: 12px;
-            color: #888;
+            color: #6a89cc;
         }
 
-        /* ── Status Badges ── */
+        .logs-table .cam {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #6a89cc;
+        }
+
+        /* Badges */
         .badge {
             display: inline-block;
             font-size: 11px;
-            font-weight: 500;
-            padding: 3px 9px;
-            border-radius: 99px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
-        .badge.authorized { background: #e6f4ed; color: #1a7a46; }
-        .badge.flagged    { background: #fdf0ef; color: #c0392b; }
-        .badge.unknown    { background: #fff7e6; color: #b45309; }
+        .badge-success {
+            background: rgba(76, 175, 80, 0.15);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
 
-        /* ── Evidence Links ── */
-        .view-btn {
-            font-size: 12px;
-            color: #2563eb;
-            text-decoration: none;
-            padding: 3px 8px;
-            border: 1px solid #bfdbfe;
+        .badge-alert {
+            background: rgba(244, 67, 54, 0.15);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        /* Flash messages */
+        .flash-message {
+            padding: 12px 16px;
+            margin-bottom: 20px;
             border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            animation: fadeIn 0.4s ease;
         }
 
-        .view-btn:hover {
-            background: #eff6ff;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .no-img {
-            font-size: 12px;
-            color: #bbb;
+        /* Responsive */
+        @media (max-width: 768px) {
+            .topbar { padding: 0 16px; }
+            .page { padding: 0 12px 30px; }
+            .logs-table th, .logs-table td { padding: 10px 12px; }
         }
     </style>
 </head>
-<body>
+<body class="dashboard-page">
 
-    <!-- Top Navigation -->
+    <!-- ── TOPBAR ── -->
     <div class="topbar">
-        <a href="/logs" class="topbar-logo">
-            <div class="logo-icon">
+        <a href="/" class="topbar-brand">
+            <div class="brand-icon">
                 <img src="{{ url_for('static', filename='sentricore_logo.jpg') }}" alt="SentriCore">
             </div>
-            SentriCore
+            <span class="brand-name">SentriCore</span>
         </a>
         <nav>
-            <a href="/logs" class="nav-item active">Live Logs</a>
+            <a href="/logs" class="nav-item active">Live Feed</a>
             {% if session['role'] in ['hr', 'owner'] %}
             <a href="/hr" class="nav-item">Personnel</a>
             {% endif %}
@@ -215,46 +387,148 @@
         </nav>
     </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="content-header">
-            <h2>Activity Logs</h2>
-            <p>Real-time surveillance data from across the organization.</p>
-        </header>
+    <!-- ── MAIN PAGE ── -->
+    <div class="page">
 
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Identity</th>
-                        <th>Status</th>
-                        <th>Confidence</th>
-                        <th>Cam ID</th>
-                        <th>Evidence</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs %}
-                    <tr class="log-row {{ log.status.lower() }}">
-                        <td><span class="timestamp">{{ log.timestamp }}</span></td>
-                        <td><strong>{{ log.name }}</strong></td>
-                        <td><span class="badge {{ log.status.lower() }}">{{ log.status }}</span></td>
-                        <td>{{ (log.confidence * 100) | round(1) }}%</td>
-                        <td>#{{ log.camera_id }}</td>
-                        <td>
-                            {% if log.image_path %}
-                            <a href="{{ url_for('static', filename=log.image_path) }}" target="_blank" class="view-btn">View Capture</a>
-                            {% else %}
-                            <span class="no-img">No Image</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Live Camera Monitor -->
+        <div class="monitor-section">
+            <div class="monitor-header">
+                <div class="live-dot"></div>
+                <h2>Live Surveillance</h2>
+                <span class="cam-label">CAM :: WEB_PORTAL_01</span>
+            </div>
+            <div class="video-container">
+                <span class="corner-tag">● REC</span>
+                <span class="corner-tag-r">LIVE</span>
+                <div class="scanner-line"></div>
+                <video id="video" autoplay muted playsinline></video>
+            </div>
+            <div class="status-panel">
+                <p>Identity: <span id="user-identity">Waiting...</span></p>
+                <span class="sys-label">SENTRICORE v2.0</span>
+            </div>
         </div>
-    </main>
+
+        <!-- Activity Log Table -->
+        <div class="table-section">
+            <div class="section-header">
+                <h3>System Activity Log</h3>
+                <span class="entry-count">{{ logs | length }} ENTRIES</span>
+            </div>
+            <div class="table-container">
+                <table class="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Personnel</th>
+                            <th>Status</th>
+                            <th>Camera</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td><strong>{{ log.name }}</strong></td>
+                            <td>
+                                <span class="badge {{ 'badge-success' if log.status == 'Success' else 'badge-alert' }}">
+                                    {{ log.status }}
+                                </span>
+                            </td>
+                            <td class="cam">{{ log.camera_id }}</td>
+                            <td class="ts">{{ log.timestamp }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not logs %}
+                        <tr>
+                            <td colspan="4" style="text-align:center; color:#1a3a5a; padding:30px; font-family:'Courier New',monospace; letter-spacing:2px; font-size:12px;">
+                                NO ACTIVITY RECORDED
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Camera + Face Detection Script -->
+    <script>
+        const video = document.getElementById('video');
+        const identity = document.getElementById('user-identity');
+
+        let lastSent = 0;
+        const INTERVAL_MS = 3000;
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.addEventListener('play', () => {
+                    setInterval(captureAndSend, INTERVAL_MS);
+                });
+            } catch (err) {
+                identity.textContent = 'Camera Unavailable';
+                identity.style.color = '#f44336';
+                console.warn('Camera access denied:', err);
+            }
+        }
+
+        async function captureAndSend() {
+            const now = Date.now();
+            if (now - lastSent < INTERVAL_MS) return;
+            lastSent = now;
+
+            const canvas = document.createElement('canvas');
+            canvas.width  = video.videoWidth  || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+
+            // Mirror-correct: flip canvas to match mirrored video
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+            try {
+                const response = await fetch('/detect_face', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: dataUrl })
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    identity.textContent = data.detected;
+                    identity.style.color = data.detected === 'Unknown' ? '#f44336' : '#4CAF50';
+
+                    // --- NEW LOGIC TO UPDATE TABLE ---
+                    // If someone is identified (known or unknown), refresh the logs
+                    if (data.detected !== "Waiting...") {
+                        // Option A: Refresh the whole page to show the new DB entry
+                        // This is the most reliable way to ensure the entry count and timestamp are correct.
+                        setTimeout(() => { 
+                            location.reload(); 
+                        }, 1500); // 1.5 second delay so you can actually see the name change first
+                    }
+                }
+            } catch (err) {
+                console.error('Detection error:', err);
+            }
+        }
+
+        startCamera();
+    </script>
 
 </body>
 </html>

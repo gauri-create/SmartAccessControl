@@ -1,60 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>SentriCore | Register Personnel</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body class="auth-page">
-
-    <div class="login-container">
-        <div class="login-header">
-            <img src="{{ url_for('static', filename='sentricore_logo.jpg') }}" alt="Logo" class="small-logo">
-            <h2>Personnel Registration</h2>
-            <p>Enroll new identity into the secure database.</p>
-        </div>
-
-        <form method="POST" enctype="multipart/form-data" class="auth-form">
-            
-            <div class="input-group">
-                <label class="form-label">System Username</label>
-                <input name="username" placeholder="e.g. jdoe24" required autocomplete="off">
-            </div>
-
-            <div class="input-group">
-                <label class="form-label">Full Legal Name</label>
-                <input name="name" placeholder="e.g. John Doe" required>
-            </div>
-
-            <div class="input-group">
-                <label class="form-label">Enrollment Photo (Face)</label>
-                <input type="file" name="face_image" accept="image/*" class="file-input" required>
-                <small style="color: #666; font-size: 0.8rem;">Ensure face is clear and centered.</small>
-            </div>
-
-            <div class="input-group">
-                <label class="form-label">Temporary Password</label>
-                <input name="password" type="password" placeholder="••••••••" required>
-            </div>
-
-            <div class="input-group">
-                <label class="form-label">Assigned Role</label>
-                <select name="role" class="styled-select" required>
-                    <option value="" disabled selected>Select Access Level...</option>
-                    <option value="employee">Employee (General Access)</option>
-                    <option value="security">Security (Logs & Monitoring)</option>
-                    <option value="hr">HR (Personnel Management)</option>
-                    <option value="owner">Owner (Full System Control)</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn-primary full-width">Create Identity</button>
-            
-            <div class="login-footer">
-                <a href="/hr" class="back-link">← Cancel and Exit</a>
-            </div>
-        </form>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body class="auth-page">
+    <div id="processingOverlay" class="processing-overlay">
+      <div class="loader"></div>
+      <p style="color: #00d2ff; font-weight: bold; letter-spacing: 1px">
+        SENTRICORE AI: ENROLLING IDENTITY...
+      </p>
     </div>
 
-</body>
+    <div class="login-container">
+      <div class="login-header">
+        <img
+          src="{{ url_for('static', filename='sentricore_logo.jpg') }}"
+          alt="Logo"
+          class="small-logo"
+        />
+        <h2>Personnel Registration</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+        {% endfor %} {% endif %} {% endwith %}
+      </div>
+
+      <form
+        method="POST"
+        enctype="multipart/form-data"
+        class="auth-form"
+        id="registerForm"
+      >
+        <div class="input-group">
+          <label class="form-label">System Username</label>
+          <input
+            name="username"
+            placeholder="e.g. gauri_b"
+            required
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="input-group">
+          <label class="form-label">Full Legal Name</label>
+          <input name="name" placeholder="e.g. Gauri Belokar" required />
+        </div>
+
+        <div class="input-group">
+          <label class="form-label">Enrollment Photo (Face)</label>
+          <input
+            type="file"
+            name="face_image"
+            accept="image/*"
+            class="file-input"
+            required
+          />
+          <small class="help-text">Face must be clear and centered.</small>
+        </div>
+
+        <div class="input-group">
+          <label class="form-label">Temporary Password</label>
+          <input
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label class="form-label">Assigned Role</label>
+          <select name="role" class="styled-select" required>
+            <option value="" disabled selected>Select Access Level...</option>
+            <option value="employee">Employee</option>
+            <option value="security">Security</option>
+            <option value="hr">HR Manager</option>
+
+            {% if current_user_role == 'owner' %}
+            <option value="owner">System Owner</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary full-width">
+          Create Identity
+        </button>
+
+        <div class="login-footer">
+          <a href="/hr" class="back-link">← Cancel and Exit</a>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      const form = document.getElementById("registerForm");
+      const overlay = document.getElementById("processingOverlay");
+
+      form.onsubmit = function () {
+        // Check if form is valid before showing loader
+        if (form.checkValidity()) {
+          overlay.style.display = "flex";
+          form.querySelector("button").disabled = true;
+          form.querySelector("button").innerText = "ENROLLING...";
+        }
+      };
+    </script>
+  </body>
 </html>

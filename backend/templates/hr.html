@@ -1,67 +1,82 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SentriCore | HR Management</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body class="admin-page">
-
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body class="admin-page">
     <header class="panel-header">
-        <div class="header-left">
-            <h2>HR - User Management</h2>
-            <p>Administering <strong>{{ users|length }}</strong> system profiles</p>
-        </div>
-        <div class="header-right">
-            <a href="/register" class="btn-primary">+ Add New User</a>
-            <a href="/owner" class="btn-outline">Dashboard</a>
-            <a href="/logout" class="btn-logout">Logout</a>
-        </div>
+      <div class="header-left">
+        <h2>HR - User Management</h2>
+        <p>Administering <strong>{{ users|length }}</strong> system profiles</p>
+      </div>
+      <div class="header-right">
+        <a href="/register" class="btn-primary">+ Add New User</a>
+        <a href="/owner" class="btn-outline">Dashboard</a>
+        <a href="/logout" class="btn-logout">Logout</a>
+      </div>
     </header>
 
     <div class="table-container">
-        <table class="styled-table">
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Full Name</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for u in users %}
-                <tr>
-                    <td><code>{{ u.username }}</code></td>
-                    <td>{{ u.name }}</td>
-                    <td><span class="role-badge">{{ u.role.upper() }}</span></td>
-                    <td>
-                        <span class="status-indicator-text status-{{ u.status }}">
-                            ● {{ u.status.capitalize() }}
-                        </span>
-                    </td>
-                    <td class="action-cells">
-                        <a href="/update_user/{{ u.id }}" class="btn-edit">Edit</a>
-
-                        {% if u.role != 'owner' %}
-                            <a href="/toggle/{{ u.id }}" class="btn-toggle {{ 'btn-deactivate' if u.status == 'active' else 'btn-activate' }}">
-                                {{ 'Deactivate' if u.status == 'active' else 'Activate' }}
-                            </a>
-                        {% else %}
-                            <span class="btn-disabled" title="Owner accounts cannot be toggled here">Protected</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td><code>{{ u.username }}</code></td>
+            <td>{{ u.name }}</td>
+            <td><span class="role-badge">{{ u.role.upper() }}</span></td>
+            <td>
+              <span class="status-indicator-text status-{{ u.status }}">
+                ● {{ u.status.capitalize() }}
+              </span>
+            </td>
+            <td class="action-cells">
+              {% if session['role'] == 'owner' or (session['role'] == 'hr' and
+              u.role != 'owner') %}
+              <a href="/update_user/{{ u.id }}" class="btn-edit">Edit</a>
+              {% else %}
+              <span
+                class="btn-disabled"
+                title="Access Restricted: Only the Owner can modify this profile"
+                >Protected</span
+              >
+              {% endif %} {% if u.role != 'owner' %}
+              <a
+                href="/toggle/{{ u.id }}"
+                class="btn-toggle {{ 'btn-deactivate' if u.status == 'active' else 'btn-activate' }}"
+              >
+                {{ 'Deactivate' if u.status == 'active' else 'Activate' }}
+              </a>
+              {% else %}
+              <span
+                class="btn-disabled"
+                title="Owner accounts cannot be toggled here"
+                >Locked</span
+              >
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <footer class="panel-footer">
-        <p>&copy; 2026 SentriCore AI Surveillance System | Nagpur Division</p>
+      <p>&copy; 2026 SentriCore AI Surveillance System | Nagpur Division</p>
     </footer>
-
-</body>
+  </body>
 </html>

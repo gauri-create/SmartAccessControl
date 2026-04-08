@@ -74,6 +74,7 @@ def init_db():
     conn.close()
     print(f"[DB] Success: Database initialized at {DB_PATH}")
 
+
 if __name__ == "__main__":
     # OPTIONAL: To completely wipe and restart, uncomment the lines below:
     # if os.path.exists(DB_PATH):

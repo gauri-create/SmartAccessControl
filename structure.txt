@@ -1,6 +1,8 @@
 Folder PATH listing for volume OS
 Volume serial number is 962A-3299
 C:.
+¦   Procfile
+¦   requirements.txt
 ¦   structure.py
 ¦   structure.txt
 ¦   
@@ -17,6 +19,7 @@ C:.
 ¦   ¦           
 ¦   +---database
 ¦   ¦   ¦   attendance.db
+¦   ¦   ¦   attendance.db-x-face_data-1-encoding.bin
 ¦   ¦   ¦   db.py
 ¦   ¦   ¦   db_logger.py
 ¦   ¦   ¦   init_db.py
@@ -30,24 +33,19 @@ C:.
 ¦   ¦   ¦   sentricore_logo.jpg
 ¦   ¦   ¦   style.css
 ¦   ¦   ¦   
-¦   ¦   +---captures
-¦   ¦   ¦       Gauri Belokar_20260404_201154.jpg
-¦   ¦   ¦       Gauri Belokar_20260404_201238.jpg
-¦   ¦   ¦       Gauri Belokar_20260404_201252.jpg
-¦   ¦   ¦       
-¦   ¦   +---known_faces
-¦   ¦   ¦       gauribelokar.jpg.png
-¦   ¦   ¦       
 ¦   ¦   +---unknown_faces
-¦   ¦           Unknown_20260404_194908.jpg
-¦   ¦           Unknown_20260404_201243.jpg
-¦   ¦           Unknown_20260404_201258.jpg
-¦   ¦           Unknown_20260404_233721.jpg
-¦   ¦           
+¦   ¦   ¦       Unknown_20260404_194908.jpg
+¦   ¦   ¦       Unknown_20260404_201243.jpg
+¦   ¦   ¦       Unknown_20260404_201258.jpg
+¦   ¦   ¦       Unknown_20260404_233721.jpg
+¦   ¦   ¦       Unknown_20260407_200858.jpg
+¦   ¦   ¦       
+¦   ¦   +---uploads
 ¦   +---templates
 ¦   ¦       edit_user.html
 ¦   ¦       hr.html
 ¦   ¦       index.html
+¦   ¦       index_logs.html
 ¦   ¦       login.html
 ¦   ¦       owner.html
 ¦   ¦       register.html
@@ -65,6 +63,9 @@ C:.
 ¦           logger.cpython-310.pyc
 ¦           __init__.cpython-310.pyc
 ¦           
++---static
+¦   +---unknown
+¦   +---uploads
 +---venv
     ¦   pyvenv.cfg
     ¦   

@@ -34,11 +34,15 @@
 
             <div class="input-group">
                 <label class="form-label">Assign System Role</label>
-                <select name="role" class="styled-select">
+                <select name="role" class="styled-select" required>
                     <option value="employee" {% if user.role == 'employee' %}selected{% endif %}>Employee</option>
                     <option value="security" {% if user.role == 'security' %}selected{% endif %}>Security</option>
-                    <option value="hr" {% if user.role == 'hr' %}selected{% endif %}>HR</option>
-                    <option value="owner" {% if user.role == 'owner' %}selected{% endif %}>Owner</option>
+                    <option value="hr" {% if user.role == 'hr' %}selected{% endif %}>HR Manager</option>
+                    
+                    {# Logic: Only show 'System Owner' if the logged-in user is an 'owner' #}
+                    {% if current_role == 'owner' %}
+                        <option value="owner" {% if user.role == 'owner' %}selected{% endif %}>System Owner</option>
+                    {% endif %}
                 </select>
             </div>
 
@@ -53,7 +57,7 @@
             <button type="submit" class="btn-primary full-width">Commit Changes</button>
             
             <div class="login-footer">
-                <a href="/hr" class="back-link">Cancel & Return</a>
+                <a href="/hr" class="back-link">← Cancel & Return</a>
             </div>
         </form>
     </div>
