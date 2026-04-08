@@ -8,33 +8,52 @@ import cv2
 import pickle
 import sys
 from datetime import datetime
+from dotenv import load_dotenv
 
-# --- PATH FIX FOR IMPORTS ---
-# This allows app.py to find backend.database and backend.utils
+# 1. Load environment variables
+load_dotenv() 
+
+# 2. Initialize Flask App
+app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# 3. Security: Pull Secret Key from Environment
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'sentricore_key_dev')
+
+# 4. PATH CONFIGURATION (Logic for Local vs Render)
+IS_RENDER = os.getenv('RENDER')
+
+# This helps find your backend modules
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
+if IS_RENDER:
+    # --- PROD: Render Persistent Disk Paths ---
+    BASE_DATA_DIR = "/opt/render/project/src/data"
+    DB_PATH = os.path.join(BASE_DATA_DIR, "attendance.db")
+    UNKNOWN_FOLDER = os.path.join(BASE_DATA_DIR, "static", "unknown_faces")
+    UPLOAD_FOLDER = os.path.join(BASE_DATA_DIR, "static", "uploads")
+    DATASET_FOLDER = os.path.join(BASE_DATA_DIR, "dataset")
+else:
+    # --- DEV: Local Windows Paths ---
+    DB_PATH = os.path.join(current_dir, "database", "attendance.db")
+    UNKNOWN_FOLDER = os.path.join(current_dir, "static", "unknown_faces")
+    UPLOAD_FOLDER = os.path.join(current_dir, "static", "uploads")
+    # Assuming dataset is in the root folder
+    DATASET_FOLDER = os.path.join(os.path.dirname(current_dir), "dataset")
+
+app.config['UNKNOWN_FOLDER'] = UNKNOWN_FOLDER
+
+# Ensure all folders exist
+for folder in [UNKNOWN_FOLDER, UPLOAD_FOLDER, DATASET_FOLDER]:
+    os.makedirs(folder, exist_ok=True)
+
+# 5. Imports from your custom modules
 from backend.database.db_logger import log_to_db
 from backend.utils.cooldown import CooldownManager
 
-app = Flask(__name__, 
-            template_folder='templates', 
-            static_folder='static')
-app.secret_key = "sentricore_key"
-
-# --- ABSOLUTE PATH CONFIGURATION ---
-DB_PATH = os.path.join(current_dir, "database", "attendance.db")
-UNKNOWN_FOLDER = os.path.join(current_dir, "static", "unknown_faces")
-UPLOAD_FOLDER = os.path.join(current_dir, "static", "uploads")
-
-app.config['UNKNOWN_FOLDER'] = UNKNOWN_FOLDER
 cooldown = CooldownManager(15)
-
-# Ensure folders exist
-for folder in [UNKNOWN_FOLDER, UPLOAD_FOLDER]:
-    os.makedirs(folder, exist_ok=True)
 
 # ---------------- DATABASE HELPERS ----------------
 def get_db():
@@ -103,7 +122,6 @@ def detect_face():
                 name = known_face_names[best_match_index]
                 confidence = float(1 - face_distances[best_match_index])
 
-        # --- LOGGING LOGIC ---
         if name == "Unknown":
             if cooldown.can_log("Unknown", "ALERT"):
                 filename = f"web_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
@@ -124,15 +142,6 @@ def detect_face():
         print(f"Error: {e}")
         return jsonify({"status": "error"}), 500
 
-
-REDIRECT_MAP = {
-    "owner": "owner",
-    "hr": "hr",
-    "security": "logs"
-}
-
-# 1. Define the Mapping at the top of your file
-# The KEY is the role in your DB, the VALUE is the function name in app.py
 REDIRECT_MAP = {
     "owner": "owner",
     "hr": "hr",
@@ -142,12 +151,10 @@ REDIRECT_MAP = {
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        # Match these names with your HTML 'name' attributes
         username = request.form.get("username")
         password = request.form.get("password")
 
         conn = get_db()
-        # Ensure we only fetch active users
         user = conn.execute(
             "SELECT * FROM users WHERE username=? AND password=? AND status='active'",
             (username, password)
@@ -155,50 +162,23 @@ def login():
         conn.close()
 
         if user:
-            # Create the session (your digital ID card)
             session["user"] = user["username"]
             session["role"] = user["role"]
-
-            # 2. PERFORM THE ROLE-BASED REDIRECT
-            # We strip() and lower() to prevent errors from accidental spaces or caps in the DB
             user_role = str(user["role"]).strip().lower()
-            
-            # Lookup the function name. If role isn't in our map, go to 'index'
             target_function = REDIRECT_MAP.get(user_role, "index")
-            
             return redirect(url_for(target_function))
 
-        # If user is None (wrong credentials)
         flash("Authentication Failed: Invalid Credentials", "error")
-
     return render_template("login.html")
 
 @app.route("/logout")
 def logout():
-    # 1. Clear all data from the session
     session.clear()
-    
-    # 2. Add a friendly departure message
     flash("Session terminated. You have been logged out safely.", "success")
-    
-    # 3. Redirect to the home or login page
     return redirect(url_for("login"))
 
-@app.route("/dashboard")
-def dashboard():
-    role = session.get("role")
-    if role == "owner":
-        return redirect(url_for("owner"))
-    elif role == "hr":
-        return redirect(url_for("hr")) # Or a specific HR home page if you have one
-    else:
-        # Default for employees/security
-        return redirect(url_for("index"))
-
-
-@app.route("/owner") # This is the URL in the browser address bar
-def owner():         # This is the "endpoint" name used by url_for()
-    # Security Check
+@app.route("/owner")
+def owner():
     if session.get("role") != "owner":
         flash("Access Denied.", "error")
         return redirect(url_for("login"))
@@ -207,12 +187,8 @@ def owner():         # This is the "endpoint" name used by url_for()
     total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     active_users = conn.execute("SELECT COUNT(*) FROM users WHERE status = 'active'").fetchone()[0]
     conn.close()
+    return render_template("owner.html", total_users=total_users, active_users=active_users)
 
-    # You can still keep the HTML file named "owner_dashboard.html" 
-    # or rename it to "owner.html" if you prefer.
-    return render_template("owner.html", 
-                           total_users=total_users, 
-                           active_users=active_users)
 @app.route("/logs")
 def logs():
     conn = get_db()
@@ -227,35 +203,8 @@ def hr():
     conn.close()
     return render_template("hr.html", users=users)
 
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    # 1. Get the role of the person currently logged in (the HR or Owner)
-    # This assumes you stored it in the session during login
-    current_user_role = session.get("role") 
-
-    if request.method == "POST":
-        new_user_role = request.form.get("role")
-        
-        # SECURITY CHECK: Prevent an HR user from "hacking" the form 
-        # by manually sending 'owner' in the POST data.
-        if new_user_role == "owner" and current_user_role != "owner":
-            flash("Unauthorized action: Only Owners can create other Owners.", "danger")
-            return redirect(url_for("register"))
-
-        # ... proceed with database logic ...
-        username = request.form.get("username")
-        # db.insert(...)
-        
-        flash(f"Identity for {username} enrolled successfully.", "success")
-        return redirect(url_for("hr"))
-
-    # 2. Pass 'current_user_role' to the template
-    return render_template("register.html", current_user_role=current_user_role)
-
 @app.route("/update_user/<int:user_id>", methods=["GET", "POST"])
 def update_user(user_id):
-    # Security Check: Ensure the person accessing this is at least HR or Owner
     current_role = session.get("role", "").lower()
     if current_role not in ["owner", "hr"]:
         flash("Unauthorized access.", "error")
@@ -270,48 +219,37 @@ def update_user(user_id):
         return redirect(url_for("hr"))
 
     if request.method == "POST":
-        # 1. SECURITY GUARD: HR cannot modify an existing Owner account
         target_role = target_user["role"].lower()
         if current_role == "hr" and target_role == "owner":
             conn.close()
             flash("Permission Denied: HR cannot modify Owner profiles.", "error")
             return redirect(url_for("hr"))
 
-        # 2. ROLE ESCALATION GUARD: Only an Owner can assign the "Owner" role
-        new_requested_role = request.form.get("role").lower()
-        if new_requested_role == "owner" and current_role != "owner":
-            conn.close()
-            flash("Permission Denied: Only the system Owner can grant Owner status.", "error")
-            return redirect(url_for("hr"))
-
         name = request.form.get("name")
         new_password = request.form.get("password")
         status = request.form.get("status")
+        new_requested_role = request.form.get("role").lower()
 
-        # Handle Password
         if new_password and new_password.strip() != "":
             conn.execute("UPDATE users SET password = ? WHERE id = ?", (new_password, user_id))
 
-        # Handle Image
         file = request.files.get("face_image")
         if file and file.filename != '':
             filename = f"{target_user['username']}.jpg"
-            file.save(os.path.join("dataset", filename))
+            file.save(os.path.join(DATASET_FOLDER, filename))
 
-        # Update core profile (using the new_requested_role checked above)
         conn.execute(
             "UPDATE users SET name = ?, role = ?, status = ? WHERE id = ?",
             (name, new_requested_role, status, user_id)
         )
         conn.commit()
         conn.close()
-
-        flash(f"Profile updated successfully!", "success")
+        flash("Profile updated successfully!", "success")
         return redirect(url_for("hr"))
 
-    # GET Request Logic
     conn.close()
     return render_template("edit_user.html", user=target_user, current_role=current_role)
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
