@@ -1,8 +1,8 @@
 blinker==1.9.0
 click==8.3.2
 colorama==0.4.6
-dlib==20.0.1
-face-recognition==1.3.0
+--find-links https://github.com/ghandic/dlib-wheels/releases/download/v19.24.1/dlib-19.24.1-cp310-cp310-linux_x86_64.whl
+dlib==19.24.1face-recognition==1.3.0
 face_recognition_models==0.3.0
 Flask==3.1.3
 itsdangerous==2.2.0
