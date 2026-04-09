@@ -8,6 +8,8 @@ import cv2
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
+import psycopg2 # ADD THIS
+from psycopg2.extras import RealDictCursor
 
 # 1. Load environment variables
 load_dotenv() 
@@ -52,9 +54,17 @@ cooldown = CooldownManager(15)
 
 # ---------------- DATABASE HELPERS ----------------
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if IS_RENDER:
+        # Connect to Postgres using the URL you put in Environment Variables
+        database_url = os.getenv('DATABASE_URL')
+        conn = psycopg2.connect(database_url)
+        # RealDictCursor makes Postgres act like sqlite3.Row
+        return conn
+    else:
+        # Use your local SQLite for development
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def get_user_status(name):
     conn = get_db()
@@ -151,6 +161,34 @@ def detect_face():
 REDIRECT_MAP = {"owner": "owner", "hr": "hr", "security": "logs"}
 
 
+def query_db(query, args=(), one=False):
+    conn = get_db()
+    
+    # Smart Placeholder: Automatically swap ? for %s if on Render
+    if IS_RENDER:
+        query = query.replace('?', '%s')
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        cur = conn.cursor()
+        
+    try:
+        cur.execute(query, args)
+        
+        # If it's a SELECT, fetch data
+        if query.strip().upper().startswith("SELECT"):
+            rv = cur.fetchall()
+        else:
+            # For INSERT/UPDATE/DELETE, commit and return nothing
+            conn.commit()
+            rv = None
+            
+        return (rv[0] if rv else None) if one else rv
+    except Exception as e:
+        print(f"Database Error: {e}")
+        return None
+    finally:
+        conn.close()
+
 # ---------------- EXIT LOGIC ----------------
 @app.route('/exit_user', methods=['POST'])
 def exit_user():
@@ -175,18 +213,17 @@ def exit_user():
         print(f"Error in exit_user: {e}")
         return jsonify({"status": "error"}), 500
     
-    
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-        conn = get_db()
-        user = conn.execute(
-            "SELECT * FROM users WHERE username=? AND password=? AND status='active'",
-            (username, password)
-        ).fetchone()
-        conn.close()
+        
+        # Using query_db makes this work on both SQLite and Postgres!
+        user = query_db("SELECT * FROM users WHERE username=? AND password=? AND status='active'", 
+                        (username, password), one=True)
+
         if user:
             session["user"] = user["username"]
             session["role"] = user["role"]
@@ -194,6 +231,7 @@ def login():
             return redirect(url_for(target))
         flash("Authentication Failed", "error")
     return render_template("login.html")
+
 
 @app.route("/logout")
 def logout():

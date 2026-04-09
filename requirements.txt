@@ -6,3 +6,4 @@ opencv-python-headless==4.13.0.92
 numpy==1.26.4
 gunicorn
 python-dotenv
+psycopg2-binary
