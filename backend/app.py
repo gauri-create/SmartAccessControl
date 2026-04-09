@@ -55,13 +55,13 @@ cooldown = CooldownManager(15)
 # ---------------- DATABASE HELPERS ----------------
 def get_db():
     if IS_RENDER:
-        # Connect to Postgres using the URL you put in Environment Variables
         database_url = os.getenv('DATABASE_URL')
+        # Safety check: ensures the URL uses the correct driver name
+        if database_url and database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
         conn = psycopg2.connect(database_url)
-        # RealDictCursor makes Postgres act like sqlite3.Row
         return conn
     else:
-        # Use your local SQLite for development
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         return conn
@@ -120,31 +120,33 @@ def detect_face():
 def query_db(query, args=(), one=False):
     conn = get_db()
     
-    # Smart Placeholder: Automatically swap ? for %s if on Render
-    if IS_RENDER:
-        query = query.replace('?', '%s')
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-    else:
-        cur = conn.cursor()
-        
     try:
+        # Use RealDictCursor for Postgres, or a simple cursor for SQLite
+        if IS_RENDER:
+            query = query.replace('?', '%s')
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+        else:
+            cur = conn.cursor()
+            
         cur.execute(query, args)
         
-        # If it's a SELECT, fetch data
+        # Check if the query is a SELECT to fetch data
         if query.strip().upper().startswith("SELECT"):
             rv = cur.fetchall()
+            # If SQLite, convert row objects to dictionaries so they match Postgres behavior
+            if not IS_RENDER and rv:
+                rv = [dict(row) for row in rv]
         else:
-            # For INSERT/UPDATE/DELETE, commit and return nothing
             conn.commit()
             rv = None
             
         return (rv[0] if rv else None) if one else rv
     except Exception as e:
-        print(f"Database Error: {e}")
+        print(f"❌ Database Error: {e}")
         return None
     finally:
         conn.close()
-
+        
 # ---------------- EXIT LOGIC ----------------
 @app.route('/exit_user', methods=['POST'])
 def exit_user():
