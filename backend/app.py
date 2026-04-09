@@ -80,12 +80,6 @@ def serve_unknown(filename):
 # ---------------- ROUTES ----------------
 
 @app.route("/")
-
-
-def index():
-    return render_template("index.html")
-
-@app.route("/")
 def index():
     return render_template("index.html")
 
