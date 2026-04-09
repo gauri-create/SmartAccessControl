@@ -80,8 +80,6 @@ def serve_unknown(filename):
 # ---------------- ROUTES ----------------
 
 @app.route("/")
-def index():
-    return render_template("index.html")
 
 @app.route('/detect_face', methods=['POST'])
 def detect_face():
@@ -192,10 +190,6 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
 
 @app.route("/owner")
 def owner():
