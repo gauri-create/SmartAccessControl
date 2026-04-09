@@ -10,6 +10,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 import psycopg2 # ADD THIS
 from psycopg2.extras import RealDictCursor
+from backend.database.db_logger import log_to_db
+from backend.utils.cooldown import CooldownManager
 
 # 1. Load environment variables
 load_dotenv() 
