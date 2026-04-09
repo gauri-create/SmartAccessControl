@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify
 import sqlite3
-import numpy as np
-import face_recognition
 import os
 import base64
 import cv2
@@ -69,36 +67,8 @@ def get_db():
         return conn
 
 def get_user_status(name):
-    conn = get_db()
-    user = conn.execute("SELECT status FROM users WHERE name=?", (name,)).fetchone()
-    conn.close()
+    user = query_db("SELECT status FROM users WHERE name=?", (name,), one=True)
     return user['status'] if user else "unknown"
-
-# ---------------- FACE DATA LOADING ----------------
-known_face_encodings = []
-known_face_names = []
-
-def reload_known_faces():
-    global known_face_encodings, known_face_names
-    try:
-        conn = get_db()
-        data = conn.execute("""
-            SELECT users.name, face_data.encoding 
-            FROM users 
-            JOIN face_data ON users.id = face_data.user_id 
-            WHERE users.status = 'active'
-        """).fetchall()
-        conn.close()
-
-        known_face_encodings = [np.frombuffer(row['encoding'], dtype=np.float64) for row in data]
-        known_face_names = [row['name'] for row in data]
-        print(f"✅ Loaded {len(known_face_names)} faces.")
-    except Exception as e:
-        print(f"❌ Load error: {e}")
-
-# Initial load
-reload_known_faces()
-
 # ---------------- SERVING PERSISTENT IMAGES ----------------
 # Since Render's persistent disk is outside the 'static' folder, 
 # we need this route to show unknown faces on the web page.
