@@ -67,6 +67,7 @@ def get_db():
         return conn
 
 def get_user_status(name):
+    # Change '?' to '%s' here because query_db handles the conversion based on IS_RENDER
     user = query_db("SELECT status FROM users WHERE name=?", (name,), one=True)
     return user['status'] if user else "unknown"
 # ---------------- SERVING PERSISTENT IMAGES ----------------

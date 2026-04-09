@@ -389,42 +389,27 @@
 
     <!-- ── MAIN PAGE ── -->
     <div class="page">
-
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-            <div class="flash-message flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-        {% endwith %}
-
-        <div class="monitor-section">
-    <div class="monitor-header">
-        <div class="live-dot"></div>
-        <h2>Surveillance Feed</h2>
-        <span class="cam-label">REMOTE :: LAPTOP_CAM_01</span>
+    <div class="monitor-section">
+        <div class="monitor-header">
+            <div class="live-dot"></div>
+            <h2>Remote Monitoring</h2>
+            <span class="cam-label">REMOTE :: LAPTOP_CAM_01</span>
+        </div>
+        <div class="video-container" style="background: #030d1a; height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <div class="scanner-line"></div>
+            <p style="color: #00d2ff; font-family: 'Courier New', monospace; letter-spacing: 2px;">RECEIVING REMOTE DATA...</p>
+            <p style="font-size: 10px; color: #6a89cc;">LOGS UPDATE AUTOMATICALLY</p>
+        </div>
+        <div class="status-panel">
+            <p>Last System Event: <span id="user-identity" style="color: #00d2ff;">
+                {% if logs %}{{ logs[0].name }}{% else %}Standing By{% endif %}
+            </span></p>
+            <span class="sys-label">SENTRICORE v2.0 | CLOUD</span>
+        </div>
     </div>
-    <div class="video-container" style="background: #030d1a; height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-        <div class="scanner-line"></div>
-        <p style="color: #00d2ff; font-family: 'Courier New', monospace; letter-spacing: 2px;">RECEIVING REMOTE DATA...</p>
-        <p style="font-size: 10px; color: #6a89cc;">LOGS UPDATE AUTOMATICALLY</p>
-    </div>
-    <div class="status-panel">
-        <p>Last System Event: <span id="user-identity" style="color: #00d2ff;">
-            {% if logs %}{{ logs[0].name }}{% else %}Standing By{% endif %}
-        </span></p>
-        <span class="sys-label">SENTRICORE v2.0 | CLOUD</span>
-    </div>
-</div>
 
-<script>
-    // Instead of using the webcam, this page will just refresh 
-    // every 10 seconds to show new logs from the laptop.
-    setInterval(function(){
-        location.reload();
-    }, 10000); // 10 seconds
-</script>
+    </div>
+
         <!-- Activity Log Table -->
         <div class="table-section">
             <div class="section-header">
