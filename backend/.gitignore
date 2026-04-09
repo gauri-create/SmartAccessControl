@@ -11,3 +11,4 @@ __pycache__/
 # Ignore personal face images
 dataset/*.jpg
 !dataset/admin.jpg
+structure.txt
