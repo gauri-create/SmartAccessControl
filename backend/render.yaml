@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sentricore-backend
+    env: python
+    plan: free # Or your preferred plan
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn backend/app.py
+    disk:
+      name: sentricore-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+    envVars:
+      - key: RENDER
+        value: "True"
+      - key: FLASK_SECRET_KEY
+        generateValue: true

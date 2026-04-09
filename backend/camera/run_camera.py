@@ -1,118 +1,94 @@
 import cv2
 import face_recognition
 import numpy as np
-import sqlite3
+import requests
+import base64
 import time
 import os
 from datetime import datetime
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from backend.database.db_logger import log_to_db
-from backend.utils.cooldown import CooldownManager
 
-DB_PATH = "backend/database/attendance.db"
-UNKNOWN_FOLDER = "backend/static/unknown_faces"
+# --- CONFIGURATION ---
+# Replace with your actual Render URL
+RENDER_URL = "https://your-app-name.onrender.com/detect_face"
 
-cooldown = CooldownManager(15)
-active_users = {}
+# Since we don't have direct DB access, we'll track active users locally 
+# just to handle the "EXIT" logic before telling the cloud.
+active_users = {} 
+process_this_frame = True
 
-def save_unknown_snapshot(frame):
-    """Saves image ONLY for unknown intruders."""
-    os.makedirs(UNKNOWN_FOLDER, exist_ok=True)
-    filename = f"Unknown_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-    path = os.path.join(UNKNOWN_FOLDER, filename)
-    cv2.imwrite(path, frame)
-    return f"unknown_faces/{filename}"
+def frame_to_base64(frame):
+    """Converts a CV2 frame to a base64 string for the API."""
+    _, buffer = cv2.imencode('.jpg', frame)
+    img_str = base64.b64encode(buffer).decode('utf-8')
+    return f"data:image/jpeg;base64,{img_str}"
 
-def load_faces():
-    """Loads encodings from the new BLOB-based face_data table."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    # Note the join: we get the name from the users table via user_id
-    cursor.execute("""
-        SELECT users.name, face_data.encoding 
-        FROM face_data 
-        JOIN users ON face_data.user_id = users.id
-    """)
-    rows = cursor.fetchall()
-    conn.close()
+def send_to_cloud(frame, name="Unknown"):
+    """Sends the detection event to the Render Backend."""
+    payload = {
+        "image": frame_to_base64(frame)
+    }
+    try:
+        response = requests.post(RENDER_URL, json=payload, timeout=5)
+        if response.status_code == 200:
+            result = response.json()
+            return result.get("detected", "Unknown")
+    except Exception as e:
+        print(f"📡 Cloud Connection Error: {e}")
+    return "Error"
 
-    encodings = []
-    names = []
-    for name, enc in rows:
-        encodings.append(np.frombuffer(enc, dtype=np.float64))
-        names.append(name)
-    return encodings, names
-
-def get_status(name):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT status FROM users WHERE name=?", (name,))
-    row = cursor.fetchone()
-    conn.close()
-    return row[0] if row else "unknown"
-
-# Initial Load
-known_encodings, known_names = load_faces()
+# Start Video
 video = cv2.VideoCapture(0)
-process_this_frame = True # For frame skipping (i3 optimization)
+
+print("--- SentriCore Edge Node Active ---")
+print(f"Targeting: {RENDER_URL}")
 
 while True:
     ret, frame = video.read()
     if not ret: break
 
-    # 1. Resize frame to 1/4 size for faster processing on i3
+    # 1. Resize for i3 Performance
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
     rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
-    # 2. Only process every other frame to save CPU
     if process_this_frame:
+        # 2. Local Face Detection (Find where faces are)
         locations = face_recognition.face_locations(rgb_small_frame)
-        encodings = face_recognition.face_encodings(rgb_small_frame, locations)
-
-        for face_encoding, loc in zip(encodings, locations):
-            matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.5)
-            face_distances = face_recognition.face_distance(known_encodings, face_encoding)
+        
+        if locations:
+            # 3. Send the image to the Cloud Brain
+            # The Cloud handles the heavy encoding comparison and DB logging
+            detected_name = send_to_cloud(frame)
             
-            name = "Unknown"
-            confidence = 0.0
-
-            if len(face_distances) > 0 and True in matches:
-                best_match_index = np.argmin(face_distances)
-                name = known_names[best_match_index]
-                confidence = 1 - face_distances[best_match_index]
-
-            # --- LOGIC SEPARATION ---
-            
-            if name == "Unknown":
-                if cooldown.can_log("Unknown", "ALERT"):
-                    img_path = save_unknown_snapshot(frame)
-                    log_to_db("Unknown", "ALERT", img_path, confidence)
-                continue
-
-            status = get_status(name)
-            if status == "inactive":
-                if cooldown.can_log(name, "ALERT"):
-                    log_to_db(name, "ALERT", "", confidence) # No image needed for known blocked users
-                continue
-
-            # 🟢 Entry Logic (No Image Saved)
-            if name not in active_users:
-                log_to_db(name, "ENTRY", "", confidence)
-                active_users[name] = time.time()
-            else:
-                active_users[name] = time.time()
+            if detected_name and detected_name != "Unknown" and detected_name != "Error":
+                active_users[detected_name] = time.time()
+                print(f"✅ Recognized: {detected_name}")
+            elif detected_name == "Unknown":
+                print("⚠️ Alert: Unknown person detected!")
 
     process_this_frame = not process_this_frame
 
-    # EXIT TRACKER
+    # 4. Local Exit Tracker 
+    # --- Inside your laptop while loop ---
     now = time.time()
     for user in list(active_users.keys()):
-        if now - active_users[user] > 10:
-            log_to_db(user, "EXIT", "", 0)
+        if now - active_users[user] > 10:  # User hasn't been seen for 10 seconds
+            print(f"🚪 Sending EXIT for {user} to Cloud...")
+            
+            # --- CALL THE NEW CLOUD ROUTE ---
+            try:
+                # Replace with your actual Render URL
+                EXIT_URL = "https://your-app-name.onrender.com/exit_user"
+                requests.post(EXIT_URL, json={"name": user}, timeout=5)
+            except Exception as e:
+                print(f"Failed to send EXIT log: {e}")
+                
             del active_users[user]
 
-    cv2.imshow("SentriCore Surveillance", frame)
+    # Display for local monitoring
+    cv2.putText(frame, "SentriCore Live: Connected to Cloud", (10, 30), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 210, 255), 2)
+    cv2.imshow("SentriCore Surveillance (Edge)", frame)
+
     if cv2.waitKey(1) & 0xFF == 27: break
 
 video.release()

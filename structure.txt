@@ -3,10 +3,11 @@ Volume serial number is 962A-3299
 C:.
 ¦   Procfile
 ¦   requirements.txt
-¦   structure.py
 ¦   structure.txt
 ¦   
 +---backend
+¦   ¦   .env
+¦   ¦   .gitignore
 ¦   ¦   app.py
 ¦   ¦   __init__.py
 ¦   ¦   
@@ -19,9 +20,9 @@ C:.
 ¦   ¦           
 ¦   +---database
 ¦   ¦   ¦   attendance.db
-¦   ¦   ¦   attendance.db-x-face_data-1-encoding.bin
 ¦   ¦   ¦   db.py
 ¦   ¦   ¦   db_logger.py
+¦   ¦   ¦   del.py
 ¦   ¦   ¦   init_db.py
 ¦   ¦   ¦   
 ¦   ¦   +---__pycache__
@@ -39,6 +40,21 @@ C:.
 ¦   ¦   ¦       Unknown_20260404_201258.jpg
 ¦   ¦   ¦       Unknown_20260404_233721.jpg
 ¦   ¦   ¦       Unknown_20260407_200858.jpg
+¦   ¦   ¦       web_20260408_073013.jpg
+¦   ¦   ¦       web_20260408_073419.jpg
+¦   ¦   ¦       web_20260408_073849.jpg
+¦   ¦   ¦       web_20260408_073953.jpg
+¦   ¦   ¦       web_20260408_074013.jpg
+¦   ¦   ¦       web_20260408_074032.jpg
+¦   ¦   ¦       web_20260408_075741.jpg
+¦   ¦   ¦       web_20260408_081645.jpg
+¦   ¦   ¦       web_20260408_082051.jpg
+¦   ¦   ¦       web_20260408_082108.jpg
+¦   ¦   ¦       web_20260408_082259.jpg
+¦   ¦   ¦       web_20260408_082329.jpg
+¦   ¦   ¦       web_20260408_083017.jpg
+¦   ¦   ¦       web_20260408_083452.jpg
+¦   ¦   ¦       web_20260408_085654.jpg
 ¦   ¦   ¦       
 ¦   ¦   +---uploads
 ¦   +---templates
@@ -63,9 +79,6 @@ C:.
 ¦           logger.cpython-310.pyc
 ¦           __init__.cpython-310.pyc
 ¦           
-+---static
-¦   +---unknown
-¦   +---uploads
 +---venv
     ¦   pyvenv.cfg
     ¦   
@@ -411,6 +424,38 @@ C:.
     ¦       ¦   ¦   
     ¦       ¦   +---licenses
     ¦       ¦           LICENSE.txt
+    ¦       ¦           
+    ¦       +---dlib_bin-20.0.1.dist-info
+    ¦       ¦   ¦   INSTALLER
+    ¦       ¦   ¦   METADATA
+    ¦       ¦   ¦   RECORD
+    ¦       ¦   ¦   REQUESTED
+    ¦       ¦   ¦   top_level.txt
+    ¦       ¦   ¦   WHEEL
+    ¦       ¦   ¦   
+    ¦       ¦   +---licenses
+    ¦       ¦           LICENSE.txt
+    ¦       ¦           
+    ¦       +---dotenv
+    ¦       ¦   ¦   cli.py
+    ¦       ¦   ¦   ipython.py
+    ¦       ¦   ¦   main.py
+    ¦       ¦   ¦   parser.py
+    ¦       ¦   ¦   py.typed
+    ¦       ¦   ¦   variables.py
+    ¦       ¦   ¦   version.py
+    ¦       ¦   ¦   __init__.py
+    ¦       ¦   ¦   __main__.py
+    ¦       ¦   ¦   
+    ¦       ¦   +---__pycache__
+    ¦       ¦           cli.cpython-310.pyc
+    ¦       ¦           ipython.cpython-310.pyc
+    ¦       ¦           main.cpython-310.pyc
+    ¦       ¦           parser.cpython-310.pyc
+    ¦       ¦           variables.cpython-310.pyc
+    ¦       ¦           version.cpython-310.pyc
+    ¦       ¦           __init__.cpython-310.pyc
+    ¦       ¦           __main__.cpython-310.pyc
     ¦       ¦           
     ¦       +---face_recognition
     ¦       ¦   ¦   api.py
@@ -3867,6 +3912,18 @@ C:.
     ¦       ¦   +---__pycache__
     ¦       ¦           __init__.cpython-310.pyc
     ¦       ¦           
+    ¦       +---python_dotenv-1.2.2.dist-info
+    ¦       ¦   ¦   entry_points.txt
+    ¦       ¦   ¦   INSTALLER
+    ¦       ¦   ¦   METADATA
+    ¦       ¦   ¦   RECORD
+    ¦       ¦   ¦   REQUESTED
+    ¦       ¦   ¦   top_level.txt
+    ¦       ¦   ¦   WHEEL
+    ¦       ¦   ¦   
+    ¦       ¦   +---licenses
+    ¦       ¦           LICENSE
+    ¦       ¦           
     ¦       +---setuptools
     ¦       ¦   ¦   archive_util.py
     ¦       ¦   ¦   build_meta.py
@@ -4321,6 +4378,7 @@ C:.
             activate.bat
             Activate.ps1
             deactivate.bat
+            dotenv.exe
             f2py.exe
             face_detection.exe
             face_recognition.exe

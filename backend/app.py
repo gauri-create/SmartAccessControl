@@ -5,7 +5,6 @@ import face_recognition
 import os
 import base64
 import cv2
-import pickle
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
@@ -14,42 +13,38 @@ from dotenv import load_dotenv
 load_dotenv() 
 
 # 2. Initialize Flask App
+# Note: We keep static_folder as 'static' so Flask can serve CSS/JS easily
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
-# 3. Security: Pull Secret Key from Environment
+# 3. Security
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'sentricore_key_dev')
 
 # 4. PATH CONFIGURATION (Logic for Local vs Render)
 IS_RENDER = os.getenv('RENDER')
-
-# This helps find your backend modules
 current_dir = os.path.dirname(os.path.abspath(__file__))
+
+if IS_RENDER:
+    # --- PROD: Render Persistent Disk ---
+    BASE_DATA_DIR = "/opt/render/project/src/data"
+    DB_PATH = os.path.join(BASE_DATA_DIR, "attendance.db")
+    # We store images in the persistent disk, but we'll need a way to serve them
+    UNKNOWN_FOLDER = os.path.join(BASE_DATA_DIR, "unknown_faces")
+    DATASET_FOLDER = os.path.join(BASE_DATA_DIR, "dataset")
+else:
+    # --- DEV: Local Windows ---
+    DB_PATH = os.path.join(current_dir, "database", "attendance.db")
+    UNKNOWN_FOLDER = os.path.join(current_dir, "static", "unknown_faces")
+    DATASET_FOLDER = os.path.join(os.path.dirname(current_dir), "dataset")
+
+# Ensure persistent folders exist
+for folder in [UNKNOWN_FOLDER, DATASET_FOLDER]:
+    os.makedirs(folder, exist_ok=True)
+
+# 5. Handle System Path for backend modules
 project_root = os.path.dirname(current_dir)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-if IS_RENDER:
-    # --- PROD: Render Persistent Disk Paths ---
-    BASE_DATA_DIR = "/opt/render/project/src/data"
-    DB_PATH = os.path.join(BASE_DATA_DIR, "attendance.db")
-    UNKNOWN_FOLDER = os.path.join(BASE_DATA_DIR, "static", "unknown_faces")
-    UPLOAD_FOLDER = os.path.join(BASE_DATA_DIR, "static", "uploads")
-    DATASET_FOLDER = os.path.join(BASE_DATA_DIR, "dataset")
-else:
-    # --- DEV: Local Windows Paths ---
-    DB_PATH = os.path.join(current_dir, "database", "attendance.db")
-    UNKNOWN_FOLDER = os.path.join(current_dir, "static", "unknown_faces")
-    UPLOAD_FOLDER = os.path.join(current_dir, "static", "uploads")
-    # Assuming dataset is in the root folder
-    DATASET_FOLDER = os.path.join(os.path.dirname(current_dir), "dataset")
-
-app.config['UNKNOWN_FOLDER'] = UNKNOWN_FOLDER
-
-# Ensure all folders exist
-for folder in [UNKNOWN_FOLDER, UPLOAD_FOLDER, DATASET_FOLDER]:
-    os.makedirs(folder, exist_ok=True)
-
-# 5. Imports from your custom modules
 from backend.database.db_logger import log_to_db
 from backend.utils.cooldown import CooldownManager
 
@@ -89,7 +84,16 @@ def reload_known_faces():
     except Exception as e:
         print(f"❌ Load error: {e}")
 
+# Initial load
 reload_known_faces()
+
+# ---------------- SERVING PERSISTENT IMAGES ----------------
+# Since Render's persistent disk is outside the 'static' folder, 
+# we need this route to show unknown faces on the web page.
+@app.route('/media/unknown/<filename>')
+def serve_unknown(filename):
+    from flask import send_from_directory
+    return send_from_directory(UNKNOWN_FOLDER, filename)
 
 # ---------------- ROUTES ----------------
 @app.route("/")
@@ -125,9 +129,11 @@ def detect_face():
         if name == "Unknown":
             if cooldown.can_log("Unknown", "ALERT"):
                 filename = f"web_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                filepath = os.path.join(app.config['UNKNOWN_FOLDER'], filename)
+                filepath = os.path.join(UNKNOWN_FOLDER, filename)
                 cv2.imwrite(filepath, frame)
-                log_to_db("Unknown", "ALERT", f"unknown_faces/{filename}", confidence)
+                # Save the URL path so the <img> tag can find it
+                img_url = url_for('serve_unknown', filename=filename)
+                log_to_db("Unknown", "ALERT", img_url, confidence)
         else:
             status = get_user_status(name)
             if status == "active":
@@ -142,52 +148,66 @@ def detect_face():
         print(f"Error: {e}")
         return jsonify({"status": "error"}), 500
 
-REDIRECT_MAP = {
-    "owner": "owner",
-    "hr": "hr",
-    "security": "logs"
-}
+REDIRECT_MAP = {"owner": "owner", "hr": "hr", "security": "logs"}
 
+
+# ---------------- EXIT LOGIC ----------------
+@app.route('/exit_user', methods=['POST'])
+def exit_user():
+    """Endpoint for the local laptop to report when a user leaves the frame."""
+    try:
+        data = request.get_json()
+        name = data.get('name')
+
+        if not name:
+            return jsonify({"status": "error", "message": "No name provided"}), 400
+
+        # Optional: Use a short cooldown so we don't log 'EXIT' 
+        # if they just blinked out for 1 second.
+        if cooldown.can_log(name, "EXIT"):
+            log_to_db(name, "EXIT", "", 0.0)
+            print(f"🚪 Logged EXIT for {name}")
+            return jsonify({"status": "success", "message": f"Exit logged for {name}"})
+        
+        return jsonify({"status": "skipped", "message": "Cooldown active"})
+        
+    except Exception as e:
+        print(f"Error in exit_user: {e}")
+        return jsonify({"status": "error"}), 500
+    
+    
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-
         conn = get_db()
         user = conn.execute(
             "SELECT * FROM users WHERE username=? AND password=? AND status='active'",
             (username, password)
         ).fetchone()
         conn.close()
-
         if user:
             session["user"] = user["username"]
             session["role"] = user["role"]
-            user_role = str(user["role"]).strip().lower()
-            target_function = REDIRECT_MAP.get(user_role, "index")
-            return redirect(url_for(target_function))
-
-        flash("Authentication Failed: Invalid Credentials", "error")
+            target = REDIRECT_MAP.get(str(user["role"]).strip().lower(), "index")
+            return redirect(url_for(target))
+        flash("Authentication Failed", "error")
     return render_template("login.html")
 
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("Session terminated. You have been logged out safely.", "success")
     return redirect(url_for("login"))
 
 @app.route("/owner")
 def owner():
-    if session.get("role") != "owner":
-        flash("Access Denied.", "error")
-        return redirect(url_for("login"))
-
+    if session.get("role") != "owner": return redirect(url_for("login"))
     conn = get_db()
-    total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    active_users = conn.execute("SELECT COUNT(*) FROM users WHERE status = 'active'").fetchone()[0]
+    total = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    active = conn.execute("SELECT COUNT(*) FROM users WHERE status = 'active'").fetchone()[0]
     conn.close()
-    return render_template("owner.html", total_users=total_users, active_users=active_users)
+    return render_template("owner.html", total_users=total, active_users=active)
 
 @app.route("/logs")
 def logs():
@@ -206,31 +226,21 @@ def hr():
 @app.route("/update_user/<int:user_id>", methods=["GET", "POST"])
 def update_user(user_id):
     current_role = session.get("role", "").lower()
-    if current_role not in ["owner", "hr"]:
-        flash("Unauthorized access.", "error")
-        return redirect(url_for("login"))
+    if current_role not in ["owner", "hr"]: return redirect(url_for("login"))
 
     conn = get_db()
     target_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-
     if not target_user:
         conn.close()
-        flash("User not found.", "error")
         return redirect(url_for("hr"))
 
     if request.method == "POST":
-        target_role = target_user["role"].lower()
-        if current_role == "hr" and target_role == "owner":
-            conn.close()
-            flash("Permission Denied: HR cannot modify Owner profiles.", "error")
-            return redirect(url_for("hr"))
-
         name = request.form.get("name")
         new_password = request.form.get("password")
         status = request.form.get("status")
-        new_requested_role = request.form.get("role").lower()
+        role = request.form.get("role").lower()
 
-        if new_password and new_password.strip() != "":
+        if new_password:
             conn.execute("UPDATE users SET password = ? WHERE id = ?", (new_password, user_id))
 
         file = request.files.get("face_image")
@@ -238,12 +248,13 @@ def update_user(user_id):
             filename = f"{target_user['username']}.jpg"
             file.save(os.path.join(DATASET_FOLDER, filename))
 
-        conn.execute(
-            "UPDATE users SET name = ?, role = ?, status = ? WHERE id = ?",
-            (name, new_requested_role, status, user_id)
-        )
+        conn.execute("UPDATE users SET name=?, role=?, status=? WHERE id=?", (name, role, status, user_id))
         conn.commit()
         conn.close()
+        
+        # REFRESH face encodings so the camera recognizes changes immediately
+        reload_known_faces()
+        
         flash("Profile updated successfully!", "success")
         return redirect(url_for("hr"))
 
