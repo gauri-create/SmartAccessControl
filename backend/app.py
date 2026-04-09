@@ -81,15 +81,30 @@ def serve_unknown(filename):
 
 @app.route("/")
 
+
+def index():
+    return render_template("index.html")
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
 @app.route('/detect_face', methods=['POST'])
 def detect_face():
     """
     RECEIVES DATA FROM LAPTOP.
-    Laptop does the Face Recognition and sends just the Name and Confidence.
     """
+    # 1. VALIDATION: Check if the request is actually sending JSON
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Expected JSON"}), 400
+
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Empty data"}), 400
+
         name = data.get('name', 'Unknown')
+        # Use a default confidence if missing to prevent float() errors
         confidence = float(data.get('confidence', 0.0))
 
         if name == "Unknown":
@@ -102,15 +117,11 @@ def detect_face():
                 log_to_db(name, action, "", confidence)
 
         return jsonify({"status": "success", "logged": name})
+        
     except Exception as e:
-        print(f"Logging Error: {e}")
-        return jsonify({"status": "error"}), 500
-    
-
-def index():
-    return render_template("index.html")
-
-
+        # This will now print the EXACT error in your Render logs
+        print(f"CRITICAL LOGGING ERROR: {str(e)}")
+        return jsonify({"status": "error", "reason": str(e)}), 500
 
 def query_db(query, args=(), one=False):
     conn = get_db()
