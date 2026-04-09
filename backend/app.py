@@ -106,59 +106,40 @@ def serve_unknown(filename):
     return send_from_directory(UNKNOWN_FOLDER, filename)
 
 # ---------------- ROUTES ----------------
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
 @app.route('/detect_face', methods=['POST'])
 def detect_face():
+    """
+    RECEIVES DATA FROM LAPTOP.
+    Laptop does the Face Recognition and sends just the Name and Confidence.
+    """
     try:
         data = request.get_json()
-        image_b64 = data.get('image').split(",")[1]
-        image_bytes = base64.b64decode(image_b64)
-        
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        face_locations = face_recognition.face_locations(rgb_frame)
-        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-
-        name = "Unknown"
-        confidence = 0.0
-
-        if face_encodings:
-            matches = face_recognition.compare_faces(known_face_encodings, face_encodings[0], tolerance=0.5)
-            face_distances = face_recognition.face_distance(known_face_encodings, face_encodings[0])
-
-            if len(face_distances) > 0 and True in matches:
-                best_match_index = np.argmin(face_distances)
-                name = known_face_names[best_match_index]
-                confidence = float(1 - face_distances[best_match_index])
+        name = data.get('name', 'Unknown')
+        confidence = float(data.get('confidence', 0.0))
 
         if name == "Unknown":
             if cooldown.can_log("Unknown", "ALERT"):
-                filename = f"web_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                filepath = os.path.join(UNKNOWN_FOLDER, filename)
-                cv2.imwrite(filepath, frame)
-                # Save the URL path so the <img> tag can find it
-                img_url = url_for('serve_unknown', filename=filename)
-                log_to_db("Unknown", "ALERT", img_url, confidence)
+                log_to_db("Unknown", "ALERT", "", confidence)
         else:
             status = get_user_status(name)
-            if status == "active":
-                if cooldown.can_log(name, "ENTRY"):
-                    log_to_db(name, "ENTRY", "", confidence)
-            else:
-                if cooldown.can_log(name, "ALERT"):
-                    log_to_db(name, "ALERT", "", confidence)
+            action = "ENTRY" if status == "active" else "ALERT"
+            if cooldown.can_log(name, action):
+                log_to_db(name, action, "", confidence)
 
-        return jsonify({"status": "success", "detected": name})
+        return jsonify({"status": "success", "logged": name})
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Logging Error: {e}")
         return jsonify({"status": "error"}), 500
+    
 
-REDIRECT_MAP = {"owner": "owner", "hr": "hr", "security": "logs"}
+def index():
+    return render_template("index.html")
+
 
 
 def query_db(query, args=(), one=False):
@@ -219,19 +200,25 @@ def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-        
-        # Using query_db makes this work on both SQLite and Postgres!
         user = query_db("SELECT * FROM users WHERE username=? AND password=? AND status='active'", 
                         (username, password), one=True)
-
         if user:
             session["user"] = user["username"]
             session["role"] = user["role"]
-            target = REDIRECT_MAP.get(str(user["role"]).strip().lower(), "index")
-            return redirect(url_for(target))
+            
+            # Redirect based on role
+            role = str(user["role"]).strip().lower()
+            if role == "owner": return redirect(url_for("owner"))
+            if role == "hr": return redirect(url_for("hr"))
+            return redirect(url_for("logs"))
+            
         flash("Authentication Failed", "error")
     return render_template("login.html")
 
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 @app.route("/logout")
 def logout():
@@ -241,36 +228,37 @@ def logout():
 @app.route("/owner")
 def owner():
     if session.get("role") != "owner": return redirect(url_for("login"))
-    conn = get_db()
-    total = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    active = conn.execute("SELECT COUNT(*) FROM users WHERE status = 'active'").fetchone()[0]
-    conn.close()
+    
+    # Simple count queries
+    res_total = query_db("SELECT COUNT(*) as count FROM users", one=True)
+    res_active = query_db("SELECT COUNT(*) as count FROM users WHERE status = 'active'", one=True)
+    
+    total = res_total['count'] if res_total else 0
+    active = res_active['count'] if res_active else 0
+    
     return render_template("owner.html", total_users=total, active_users=active)
+
 
 @app.route("/logs")
 def logs():
-    conn = get_db()
-    logs_data = conn.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 50").fetchall()
-    conn.close()
+    # Show last 50 events
+    logs_data = query_db("SELECT * FROM logs ORDER BY id DESC LIMIT 50")
     return render_template("index_logs.html", logs=logs_data)
 
 @app.route("/hr")
 def hr():
-    conn = get_db()
-    users = conn.execute("SELECT * FROM users").fetchall()
-    conn.close()
-    return render_template("hr.html", users=users)
+    if session.get("role") not in ["owner", "hr"]: return redirect(url_for("login"))
+    users_data = query_db("SELECT * FROM users")
+    return render_template("hr.html", users=users_data)
+
 
 @app.route("/update_user/<int:user_id>", methods=["GET", "POST"])
 def update_user(user_id):
     current_role = session.get("role", "").lower()
     if current_role not in ["owner", "hr"]: return redirect(url_for("login"))
 
-    conn = get_db()
-    target_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    if not target_user:
-        conn.close()
-        return redirect(url_for("hr"))
+    target_user = query_db("SELECT * FROM users WHERE id = ?", (user_id,), one=True)
+    if not target_user: return redirect(url_for("hr"))
 
     if request.method == "POST":
         name = request.form.get("name")
@@ -279,24 +267,13 @@ def update_user(user_id):
         role = request.form.get("role").lower()
 
         if new_password:
-            conn.execute("UPDATE users SET password = ? WHERE id = ?", (new_password, user_id))
+            query_db("UPDATE users SET password = ? WHERE id = ?", (new_password, user_id))
 
-        file = request.files.get("face_image")
-        if file and file.filename != '':
-            filename = f"{target_user['username']}.jpg"
-            file.save(os.path.join(DATASET_FOLDER, filename))
-
-        conn.execute("UPDATE users SET name=?, role=?, status=? WHERE id=?", (name, role, status, user_id))
-        conn.commit()
-        conn.close()
-        
-        # REFRESH face encodings so the camera recognizes changes immediately
-        reload_known_faces()
+        query_db("UPDATE users SET name=?, role=?, status=? WHERE id=?", (name, role, status, user_id))
         
         flash("Profile updated successfully!", "success")
         return redirect(url_for("hr"))
 
-    conn.close()
     return render_template("edit_user.html", user=target_user, current_role=current_role)
 
 if __name__ == "__main__":
