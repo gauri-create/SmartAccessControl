@@ -175,7 +175,6 @@ def exit_user():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    # Only Owners and HR should be able to register new people
     current_role = session.get("role", "").lower()
     if current_role not in ["owner", "hr"]:
         flash("Unauthorized access.", "error")
@@ -185,21 +184,20 @@ def register():
         username = request.form.get("username")
         name = request.form.get("name")
         password = request.form.get("password")
-        role = request.form.get("role")
+        role = request.form.get("role").lower() # Standardize to lowercase
         face_image = request.files.get("face_image")
 
         if not face_image:
             flash("Face image is required for enrollment.", "error")
             return redirect(request.url)
 
-        # 1. Save the Image to the dataset folder
-        # We name the file after the 'name' variable so the AI knows who it is
+        # File saving logic remains the same (Works on Render via BASE_DATA_DIR)
         filename = f"{name.replace(' ', '_').lower()}.jpg"
         image_path = os.path.join(DATASET_FOLDER, filename)
         face_image.save(image_path)
 
-        # 2. Save User to Database
         try:
+            # query_db will handle the ? -> %s conversion for Postgres
             query_db("""
                 INSERT INTO users (username, name, password, role, status) 
                 VALUES (?, ?, ?, ?, 'active')
@@ -208,11 +206,11 @@ def register():
             flash(f"Identity for {name} created successfully!", "success")
             return redirect(url_for("hr"))
         except Exception as e:
-            flash(f"Database Error: {str(e)}", "error")
+            print(f"Registration Error: {e}") # Log this to Render's dashboard
+            flash("Database Error during registration.", "error")
             return redirect(request.url)
 
     return render_template("register.html", current_user_role=current_role)
-
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
