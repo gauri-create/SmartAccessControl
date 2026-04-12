@@ -84,39 +84,37 @@ def serve_unknown(filename):
 def index():
     return render_template("index.html")
 
+import uuid # Add this to your imports at the top!
+
 @app.route('/detect_face', methods=['POST'])
 def detect_face():
-    """
-    RECEIVES DATA FROM LAPTOP.
-    """
-    # 1. VALIDATION: Check if the request is actually sending JSON
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Expected JSON"}), 400
+    data = request.json
+    name = data.get("name")
+    confidence = data.get("confidence", 0)
+    image_data = data.get("image_data") # This is the Base64 string
 
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"status": "error", "message": "Empty data"}), 400
-
-        name = data.get('name', 'Unknown')
-        # Use a default confidence if missing to prevent float() errors
-        confidence = float(data.get('confidence', 0.0))
-
-        if name == "Unknown":
-            if cooldown.can_log("Unknown", "ALERT"):
-                log_to_db("Unknown", "ALERT", "", confidence)
-        else:
-            status = get_user_status(name)
-            action = "ENTRY" if status == "active" else "ALERT"
-            if cooldown.can_log(name, action):
-                log_to_db(name, action, "", confidence)
-
-        return jsonify({"status": "success", "logged": name})
+    if name == "Unknown" and image_data:
+        # Create a unique temp ID using current time
+        temp_id = f"UKN_{int(time.time())}"
         
-    except Exception as e:
-        # This will now print the EXACT error in your Render logs
-        print(f"CRITICAL LOGGING ERROR: {str(e)}")
-        return jsonify({"status": "error", "reason": str(e)}), 500
+        # Insert into Unknowns Table
+        # If testing on SQLite, make sure your init_db.py has created this table!
+        try:
+            query_db("""
+                INSERT INTO unknown_subjects (temp_id, last_image_path, capture_count)
+                VALUES (?, ?, 1)
+            """, (temp_id, image_data))
+            print(f"🚨 ALERT: Unknown subject {temp_id} registered.")
+        except Exception as e:
+            print(f"❌ DB Error (Unknown): {e}")
+            
+    else:
+        # Standard Log for Known Personnel
+        query_db("INSERT INTO logs (name, status, confidence) VALUES (?, 'ENTRY', ?)", 
+                 (name, confidence))
+
+    return jsonify({"status": "success"}), 200
+
 
 def query_db(query, args=(), one=False):
     conn = get_db()
@@ -147,31 +145,74 @@ def query_db(query, args=(), one=False):
         return None
     finally:
         conn.close()
-        
+
+
+@app.route("/test_db")
+def test_db():
+    try:
+        # Try to fetch one row from the new table
+        res = query_db("SELECT * FROM unknown_subjects LIMIT 1")
+        return jsonify({"status": "Table exists!", "data": str(res)})
+    except Exception as e:
+        return jsonify({"status": "Error", "message": str(e)}), 500
+    
+         
 # ---------------- EXIT LOGIC ----------------
 @app.route('/exit_user', methods=['POST'])
 def exit_user():
-    """Endpoint for the local laptop to report when a user leaves the frame."""
     try:
         data = request.get_json()
-        name = data.get('name')
+        name = data.get('name', 'Unknown') # Default to Unknown if name is missing
 
-        if not name:
-            return jsonify({"status": "error", "message": "No name provided"}), 400
-
-        # Optional: Use a short cooldown so we don't log 'EXIT' 
-        # if they just blinked out for 1 second.
         if cooldown.can_log(name, "EXIT"):
             log_to_db(name, "EXIT", "", 0.0)
-            print(f"🚪 Logged EXIT for {name}")
             return jsonify({"status": "success", "message": f"Exit logged for {name}"})
         
-        return jsonify({"status": "skipped", "message": "Cooldown active"})
-        
+        return jsonify({"status": "skipped"})
     except Exception as e:
-        print(f"Error in exit_user: {e}")
-        return jsonify({"status": "error"}), 500
-    
+        return jsonify({"status": "error", "reason": str(e)}), 500
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    # Only Owners and HR should be able to register new people
+    current_role = session.get("role", "").lower()
+    if current_role not in ["owner", "hr"]:
+        flash("Unauthorized access.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        username = request.form.get("username")
+        name = request.form.get("name")
+        password = request.form.get("password")
+        role = request.form.get("role")
+        face_image = request.files.get("face_image")
+
+        if not face_image:
+            flash("Face image is required for enrollment.", "error")
+            return redirect(request.url)
+
+        # 1. Save the Image to the dataset folder
+        # We name the file after the 'name' variable so the AI knows who it is
+        filename = f"{name.replace(' ', '_').lower()}.jpg"
+        image_path = os.path.join(DATASET_FOLDER, filename)
+        face_image.save(image_path)
+
+        # 2. Save User to Database
+        try:
+            query_db("""
+                INSERT INTO users (username, name, password, role, status) 
+                VALUES (?, ?, ?, ?, 'active')
+            """, (username, name, password, role))
+            
+            flash(f"Identity for {name} created successfully!", "success")
+            return redirect(url_for("hr"))
+        except Exception as e:
+            flash(f"Database Error: {str(e)}", "error")
+            return redirect(request.url)
+
+    return render_template("register.html", current_user_role=current_role)
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -219,6 +260,18 @@ def logs():
     logs_data = query_db("SELECT * FROM logs ORDER BY id DESC LIMIT 50")
     return render_template("index_logs.html", logs=logs_data)
 
+@app.route("/unknowns")
+def view_unknowns():
+    # Security Check: Only Owner and HR can access the intelligence gallery
+    if session.get("role") not in ["owner", "security"]: 
+        return redirect(url_for("login"))
+    
+    # We fetch all data from the unknown_subjects table
+    # and pass it to the template as 'unknown_list'
+    data = query_db("SELECT * FROM unknown_subjects ORDER BY last_seen DESC")
+    
+    return render_template("unknowns.html", unknown_list=data)
+
 @app.route("/hr")
 def hr():
     if session.get("role") not in ["owner", "hr"]: return redirect(url_for("login"))
@@ -251,5 +304,5 @@ def update_user(user_id):
     return render_template("edit_user.html", user=target_user, current_role=current_role)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=False)

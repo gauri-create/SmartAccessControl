@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>SentriCore | Live Feed</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* ── TOPBAR ── */
         .topbar {
@@ -17,7 +18,6 @@
             top: 0;
             z-index: 100;
         }
-
         .topbar-brand {
             display: flex;
             align-items: center;
@@ -25,352 +25,76 @@
             text-decoration: none;
             margin-right: 36px;
         }
-
         .brand-icon {
-            width: 34px;
-            height: 34px;
+            width: 34px; height: 34px;
             border-radius: 50%;
             border: 2px solid #00d2ff;
-            box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
             background: #030d1a;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
         }
-
-        .brand-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
+        .brand-icon img { width: 100%; height: 100%; object-fit: cover; }
         .brand-name {
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: 2px;
-            color: #00d2ff;
+            font-size: 15px; font-weight: 700;
+            letter-spacing: 2px; color: #00d2ff;
             text-transform: uppercase;
         }
-
-        .topbar nav {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex: 1;
-        }
-
+        .topbar nav { display: flex; align-items: center; gap: 4px; flex: 1; }
         .nav-item {
-            font-size: 13px;
-            padding: 6px 14px;
-            border-radius: 4px;
-            color: #a0c4ff;
-            text-decoration: none;
-            letter-spacing: 0.5px;
-            transition: all 0.2s;
+            font-size: 13px; padding: 6px 14px;
+            border-radius: 4px; color: #a0c4ff;
+            text-decoration: none; transition: all 0.2s;
         }
+        .nav-item:hover, .nav-item.active { background: rgba(0, 210, 255, 0.12); color: #00d2ff; }
+        .nav-item.logout { margin-left: auto; color: #f44336; border: 1px solid #f44336; }
+        .nav-item.logout:hover { background: #f44336; color: white; }
 
-        .nav-item:hover {
-            background: rgba(0, 210, 255, 0.08);
-            color: #00d2ff;
-        }
-
-        .nav-item.active {
-            background: rgba(0, 210, 255, 0.12);
-            color: #00d2ff;
-            font-weight: 600;
-            border-bottom: 2px solid #00d2ff;
-            border-radius: 4px 4px 0 0;
-        }
-
-        .nav-item.logout {
-            margin-left: auto;
-            color: #f44336;
-            border: 1px solid #f44336;
-            border-radius: 4px;
-            padding: 5px 14px;
-        }
-
-        .nav-item.logout:hover {
-            background: #f44336;
-            color: white;
-        }
-
-        /* ── PAGE WRAPPER ── */
-        .page {
-            max-width: 1100px;
-            margin: 30px auto;
-            padding: 0 20px 40px;
-        }
-
-        /* ── LIVE MONITOR ── */
-        .monitor-section {
-            background: #0a1f33;
-            border: 2px solid #00d2ff;
-            border-radius: 15px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.2);
-            margin-bottom: 30px;
-        }
-
-        .monitor-header {
-            padding: 14px 20px;
+        /* ── PAGE LAYOUT ── */
+        .page { max-width: 1100px; margin: 30px auto; padding: 0 20px 40px; }
+        
+        /* ── NAVIGATION BUTTONS ── */
+        .action-bar {
             display: flex;
-            align-items: center;
             gap: 12px;
-            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+            margin-bottom: 25px;
         }
-
-        .monitor-header h2 {
-            color: #00d2ff;
-            font-size: 1rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin: 0;
-        }
-
-        .live-dot {
-            width: 10px;
-            height: 10px;
-            background: #f44336;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #f44336;
-            animation: pulse-red 1.5s infinite;
-            flex-shrink: 0;
-        }
-
-        @keyframes pulse-red {
-            0%   { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
-            70%  { box-shadow: 0 0 0 8px rgba(244, 67, 54, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
-        }
-
-        .cam-label {
-            margin-left: auto;
-            font-size: 11px;
-            color: #6a89cc;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 1px;
-        }
-
-        /* Video Feed */
-        .video-container {
-            position: relative;
-            background: #000;
-            max-width: 720px;
-            margin: 0 auto;
-        }
-
-        .corner-tag {
-            position: absolute;
-            top: 10px;
-            left: 12px;
-            z-index: 20;
-            font-size: 10px;
-            letter-spacing: 2px;
-            color: #f44336;
-            opacity: 0.85;
-            font-family: 'Courier New', monospace;
-        }
-
-        .corner-tag-r {
-            position: absolute;
-            top: 10px;
-            right: 12px;
-            z-index: 20;
-            font-size: 10px;
-            letter-spacing: 2px;
-            color: #00d2ff;
-            opacity: 0.8;
-            font-family: 'Courier New', monospace;
-        }
-
-        .scanner-line {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(to right, transparent, #00d2ff, transparent);
-            box-shadow: 0 0 15px #00d2ff;
-            z-index: 10;
-            animation: scan-move 4s linear infinite;
-            pointer-events: none;
-        }
-
-        @keyframes scan-move {
-            0%   { top: 0%; }
-            50%  { top: 100%; }
-            100% { top: 0%; }
-        }
-
-        #video {
-            width: 100%;
-            display: block;
-            height: auto;
-            min-height: 280px;
-            background: #000;
-            transform: rotateY(180deg); /* Mirror for natural webcam feel */
-        }
-
-        /* Status Panel */
-        .status-panel {
-            background: rgba(3, 13, 26, 0.9);
-            padding: 12px 20px;
-            border-top: 1px solid #1a3a5a;
+        .btn-action {
             display: flex;
             align-items: center;
-            gap: 20px;
-        }
-
-        .status-panel p {
-            font-size: 13px;
-            color: #a0c4ff;
-            margin: 0;
-        }
-
-        #user-identity {
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #4CAF50;
-        }
-
-        .sys-label {
-            margin-left: auto;
-            font-size: 11px;
-            color: #1a3a5a;
-            font-family: 'Courier New', monospace;
-        }
-
-        /* ── LOGS TABLE SECTION ── */
-        .table-section {
-            margin-top: 10px;
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #1a3a5a;
-        }
-
-        .section-header h3 {
-            color: #00d2ff;
-            font-size: 1rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin: 0;
-        }
-
-        .entry-count {
-            background: rgba(0, 210, 255, 0.1);
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            color: #00d2ff;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 1px;
-        }
-
-        /* Table */
-        .logs-table {
-            width: 100%;
-            border-collapse: collapse;
-            color: #ffffff;
-        }
-
-        .logs-table th {
-            background: #1a3a5a;
-            color: #00d2ff;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 1px;
-            padding: 13px 16px;
-            text-align: left;
-            font-weight: 600;
-        }
-
-        .logs-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            font-size: 13px;
-        }
-
-        .logs-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .logs-table tbody tr:hover td {
-            background: rgba(0, 210, 255, 0.04);
-        }
-
-        .logs-table .ts {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: #6a89cc;
-        }
-
-        .logs-table .cam {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: #6a89cc;
-        }
-
-        /* Badges */
-        .badge {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 3px 10px;
-            border-radius: 3px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        .badge-success {
-            background: rgba(76, 175, 80, 0.15);
-            color: #4CAF50;
-            border: 1px solid rgba(76, 175, 80, 0.3);
-        }
-
-        .badge-alert {
-            background: rgba(244, 67, 54, 0.15);
-            color: #f44336;
-            border: 1px solid rgba(244, 67, 54, 0.3);
-        }
-
-        /* Flash messages */
-        .flash-message {
-            padding: 12px 16px;
-            margin-bottom: 20px;
+            gap: 8px;
+            padding: 10px 18px;
             border-radius: 6px;
+            text-decoration: none;
             font-size: 13px;
             font-weight: 600;
-            animation: fadeIn 0.4s ease;
+            transition: 0.3s;
         }
+        .btn-dash { background: rgba(0, 210, 255, 0.1); color: #00d2ff; border: 1px solid #00d2ff; }
+        .btn-dash:hover { background: #00d2ff; color: #030d1a; }
+        .btn-unk { background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid #ff9800; }
+        .btn-unk:hover { background: #ff9800; color: white; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .topbar { padding: 0 16px; }
-            .page { padding: 0 12px 30px; }
-            .logs-table th, .logs-table td { padding: 10px 12px; }
-        }
+        /* ── TABLE STYLING ── */
+        .table-section { background: #0a1f33; border-radius: 8px; border: 1px solid #1a3a5a; overflow: hidden; }
+        .section-header { padding: 16px 20px; border-bottom: 1px solid #1a3a5a; display: flex; justify-content: space-between; align-items: center; }
+        .section-header h3 { color: #00d2ff; margin: 0; font-size: 14px; text-transform: uppercase; }
+        .entry-count { font-family: monospace; color: #6a89cc; font-size: 12px; }
+        
+        .logs-table { width: 100%; border-collapse: collapse; }
+        .logs-table th { background: #1a3a5a; color: #00d2ff; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+        .logs-table td { padding: 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0e0e0; font-size: 13px; }
+        
+        /* ── BADGES ── */
+        .badge { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; border: 1px solid transparent; }
+        .badge-entry { background: rgba(76, 175, 80, 0.1); color: #4CAF50; border-color: #4CAF50; }
+        .badge-alert { background: rgba(244, 67, 54, 0.1); color: #f44336; border-color: #f44336; }
+        .badge-exit { background: rgba(106, 137, 204, 0.1); color: #6a89cc; border-color: #6a89cc; }
+        
+        .ts { font-family: 'Courier New', monospace; color: #888; font-size: 12px; }
     </style>
 </head>
-<body class="dashboard-page">
+<body>
 
-    <!-- ── TOPBAR ── -->
     <div class="topbar">
         <a href="/" class="topbar-brand">
             <div class="brand-icon">
@@ -387,139 +111,67 @@
         </nav>
     </div>
 
-    <!-- ── MAIN PAGE ── -->
     <div class="page">
-    <div class="monitor-section">
-        <div class="monitor-header">
-            <div class="live-dot"></div>
-            <h2>Remote Monitoring</h2>
-            <span class="cam-label">REMOTE :: LAPTOP_CAM_01</span>
+        <div class="action-bar">
+            {% if session['role'] == 'owner' %}
+                <a href="/owner" class="btn-action btn-dash"><i class="fas fa-chart-line"></i> Owner Dashboard</a>
+            {% elif session['role'] == 'hr' %}
+                <a href="/hr" class="btn-action btn-dash"><i class="fas fa-users-cog"></i> HR Dashboard</a>
+            {% endif %}
+            
+            <a href="/unknowns" class="btn-action btn-unk"><i class="fas fa-user-secret"></i> Unknown Tracking</a>
         </div>
-        <div class="video-container" style="background: #030d1a; height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-            <div class="scanner-line"></div>
-            <p style="color: #00d2ff; font-family: 'Courier New', monospace; letter-spacing: 2px;">RECEIVING REMOTE DATA...</p>
-            <p style="font-size: 10px; color: #6a89cc;">LOGS UPDATE AUTOMATICALLY</p>
-        </div>
-        <div class="status-panel">
-            <p>Last System Event: <span id="user-identity" style="color: #00d2ff;">
-                {% if logs %}{{ logs[0].name }}{% else %}Standing By{% endif %}
-            </span></p>
-            <span class="sys-label">SENTRICORE v2.0 | CLOUD</span>
-        </div>
-    </div>
 
-    </div>
-
-        <!-- Activity Log Table -->
         <div class="table-section">
             <div class="section-header">
                 <h3>System Activity Log</h3>
-                <span class="entry-count">{{ logs | length }} ENTRIES</span>
+                <span class="entry-count">{{ logs | length }} RECORDS ACTIVE</span>
             </div>
-            <div class="table-container">
-                <table class="logs-table">
-                    <thead>
-                        <tr>
-                            <th>Personnel</th>
-                            <th>Status</th>
-                            <th>Camera</th>
-                            <th>Timestamp</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in logs %}
-                        <tr>
-                            <td><strong>{{ log.name }}</strong></td>
-                            <td>
-                                <span class="badge {{ 'badge-success' if log.status == 'Success' else 'badge-alert' }}">
-                                    {{ log.status }}
-                                </span>
-                            </td>
-                            <td class="cam">{{ log.camera_id }}</td>
-                            <td class="ts">{{ log.timestamp }}</td>
-                        </tr>
-                        {% endfor %}
-                        {% if not logs %}
-                        <tr>
-                            <td colspan="4" style="text-align:center; color:#1a3a5a; padding:30px; font-family:'Courier New',monospace; letter-spacing:2px; font-size:12px;">
-                                NO ACTIVITY RECORDED
-                            </td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
+            <table class="logs-table">
+                <thead>
+                    <tr>
+                        <th>Personnel / Subject ID</th>
+                        <th>Event Status</th>
+                        <th>Origin Camera</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td><strong>{{ log.name }}</strong></td>
+                        <td>
+                            {% if log.status == 'ENTRY' or log.status == 'Success' %}
+                                <span class="badge badge-entry">Authorized Entry</span>
+                            {% elif log.status == 'EXIT' %}
+                                <span class="badge badge-exit">Area Vacated</span>
+                            {% else %}
+                                <span class="badge badge-alert">Security Alert</span>
+                            {% endif %}
+                        </td>
+                        <td class="ts">LAPTOP_CAM_01</td>
+                        <td class="ts">{{ log.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                    
+                    {% if not logs %}
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding:40px; color:#555;">
+                            <i class="fas fa-shield-alt" style="display:block; font-size:24px; margin-bottom:10px;"></i>
+                            NO SYSTEM ACTIVITY DETECTED
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
-
     </div>
 
-    <!-- Camera + Face Detection Script -->
     <script>
-        const video = document.getElementById('video');
-        const identity = document.getElementById('user-identity');
-
-        let lastSent = 0;
-        const INTERVAL_MS = 3000;
-
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                video.addEventListener('play', () => {
-                    setInterval(captureAndSend, INTERVAL_MS);
-                });
-            } catch (err) {
-                identity.textContent = 'Camera Unavailable';
-                identity.style.color = '#f44336';
-                console.warn('Camera access denied:', err);
-            }
-        }
-
-        async function captureAndSend() {
-            const now = Date.now();
-            if (now - lastSent < INTERVAL_MS) return;
-            lastSent = now;
-
-            const canvas = document.createElement('canvas');
-            canvas.width  = video.videoWidth  || 640;
-            canvas.height = video.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-
-            // Mirror-correct: flip canvas to match mirrored video
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-            try {
-                const response = await fetch('/detect_face', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: dataUrl })
-                });
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    identity.textContent = data.detected;
-                    identity.style.color = data.detected === 'Unknown' ? '#f44336' : '#4CAF50';
-
-                    // --- NEW LOGIC TO UPDATE TABLE ---
-                    // If someone is identified (known or unknown), refresh the logs
-                    if (data.detected !== "Waiting...") {
-                        // Option A: Refresh the whole page to show the new DB entry
-                        // This is the most reliable way to ensure the entry count and timestamp are correct.
-                        setTimeout(() => { 
-                            location.reload(); 
-                        }, 1500); // 1.5 second delay so you can actually see the name change first
-                    }
-                }
-            } catch (err) {
-                console.error('Detection error:', err);
-            }
-        }
-
-        startCamera();
+        // Refresh every 30 seconds to show latest logs without manual reload
+        setInterval(() => {
+            location.reload();
+        }, 30000);
     </script>
 
 </body>

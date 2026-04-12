@@ -5,25 +5,28 @@ import requests
 import os
 import time
 import sqlite3
+import base64
 
 # --- CONFIGURATION ---
-# Replace with your actual Render URL
-CLOUD_BASE_URL = "https://your-app-name.onrender.com"
+CLOUD_BASE_URL = "http://127.0.0.1:5001"  # Switch to Render URL when deploying
 DETECT_URL = f"{CLOUD_BASE_URL}/detect_face"
 EXIT_URL = f"{CLOUD_BASE_URL}/exit_user"
 
-# Local DB Path (To load encodings from your laptop)
+# Local DB Path
 DB_PATH = os.path.join(os.path.dirname(__file__), "backend", "database", "attendance.db")
 
-# Tracking users for Exit logic
 active_users = {} 
 known_face_encodings = []
 known_face_names = []
 
+def convert_frame_to_base64(frame):
+    """Converts a CV2 image to a Base64 string for cloud storage."""
+    _, buffer = cv2.imencode('.jpg', frame)
+    return f"data:image/jpeg;base64,{base64.b64encode(buffer).decode('utf-8')}"
+
 def load_local_faces():
-    """Loads encodings from your local SQLite DB in Nagpur."""
     global known_face_encodings, known_face_names
-    print("🔄 Loading face database from local storage...")
+    print("🔄 Loading face database...")
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
@@ -34,82 +37,72 @@ def load_local_faces():
             WHERE users.status = 'active'
         """).fetchall()
         conn.close()
-
         known_face_encodings = [np.frombuffer(row['encoding'], dtype=np.float64) for row in data]
         known_face_names = [row['name'] for row in data]
-        print(f"✅ Loaded {len(known_face_names)} faces locally.")
+        print(f"✅ Loaded {len(known_face_names)} faces.")
     except Exception as e:
-        print(f"❌ Error loading faces: {e}")
+        print(f"❌ Load Error: {e}")
 
-def notify_cloud(name, confidence):
-    """Sends the RECOGNIZED NAME to Render."""
-    payload = {"name": name, "confidence": float(confidence)}
+def notify_cloud(name, confidence, image_data=None):
+    """Sends detection data to the backend."""
+    payload = {
+        "name": name, 
+        "confidence": float(confidence),
+        "image_data": image_data  # Only sent for Unknowns
+    }
     try:
-        response = requests.post(DETECT_URL, json=payload, timeout=5)
-        if response.status_code == 200:
-            print(f"☁️ Cloud Synced: {name}")
+        requests.post(DETECT_URL, json=payload, timeout=5)
+        print(f"☁️ Synced: {name}")
     except Exception as e:
-        print(f"📡 Cloud Sync Failed: {e}")
-
-def notify_exit(name):
-    """Sends EXIT event to Render."""
-    try:
-        requests.post(EXIT_URL, json={"name": name}, timeout=5)
-        print(f"🚪 Cloud Exit Logged: {name}")
-    except Exception as e:
-        print(f"📡 Exit Sync Failed: {e}")
+        print(f"📡 Sync Failed: {e}")
 
 # --- START SYSTEM ---
 load_local_faces()
 video = cv2.VideoCapture(0)
 
-print("--- SentriCore Edge Node Active ---")
-
 while True:
     ret, frame = video.read()
     if not ret: break
 
-    # 1. Faster processing: Resize and Convert
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
     rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
-    # 2. Recognition (Done LOCALLY on your i3)
     face_locations = face_recognition.face_locations(rgb_small_frame)
     face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-    current_frame_names = []
-
-    for face_encoding in face_encodings:
+    for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
         matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=0.5)
         name = "Unknown"
         confidence = 0.0
 
         if True in matches:
-            first_match_index = matches.index(True)
-            name = known_face_names[first_match_index]
-            face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-            confidence = 1 - face_distances[first_match_index]
+            idx = matches.index(True)
+            name = known_face_names[idx]
+            dist = face_recognition.face_distance(known_face_encodings, face_encoding)
+            confidence = 1 - dist[idx]
 
-        current_frame_names.append(name)
-
-        # 3. Notify Cloud on discovery
+        # Handle Unknown vs Known
         if name not in active_users:
-            notify_cloud(name, confidence)
+            img_payload = None
+            if name == "Unknown":
+                # Crop face from original frame (scale back by 4)
+                face_crop = frame[top*4:bottom*4, left*4:right*4]
+                img_payload = convert_frame_to_base64(face_crop)
+            
+            notify_cloud(name, confidence, img_payload)
         
         active_users[name] = time.time()
 
-    # 4. Exit Tracker (If not seen for 10 seconds)
+    # Exit Tracker
     now = time.time()
     for user in list(active_users.keys()):
         if now - active_users[user] > 10:
-            notify_exit(user)
+            if user != "Unknown": # Don't send exits for unknowns
+                try: requests.post(EXIT_URL, json={"name": user}, timeout=5)
+                except: pass
             del active_users[user]
 
-    # Visual Feedback
-    cv2.putText(frame, "SentriCore Edge: Running Recognition", (10, 30), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
     cv2.imshow("SentriCore Surveillance", frame)
-
     if cv2.waitKey(1) & 0xFF == 27: break
 
 video.release()

@@ -59,6 +59,16 @@ def init_db():
     )
     """)
 
+# Run this once to create the table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS unknown_subjects (
+        id SERIAL PRIMARY KEY,
+        temp_id TEXT UNIQUE NOT NULL,
+        last_image_path TEXT,
+        capture_count INTEGER DEFAULT 1,
+        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
     # ==========================================================
     # 4. INITIAL SETUP (Default Admin)
     # ==========================================================
@@ -73,6 +83,9 @@ def init_db():
     conn.commit()
     conn.close()
     print(f"[DB] Success: Database initialized at {DB_PATH}")
+
+
+
 
 
 if __name__ == "__main__":
