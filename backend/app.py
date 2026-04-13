@@ -384,7 +384,29 @@ def init_production_db():
     except Exception as e:
         return f"❌ Setup Failed: {str(e)}"
     
-
+@app.route("/db_status")
+def db_status():
+    if not IS_RENDER: return "Local mode"
+    
+    try:
+        # Get all users
+        users = query_db("SELECT * FROM users")
+        # Get all tables
+        tables = query_db("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        
+        return jsonify({
+            "connection": "SUCCESS",
+            "tables_found": tables,
+            "users_in_db": users,
+            "current_session": {
+                "user": session.get("user"),
+                "role": session.get("role")
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    
+    
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
