@@ -215,23 +215,36 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
+        # Use .strip() to remove any accidental spaces from the form
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        
         user = query_db("SELECT * FROM users WHERE username=? AND password=? AND status='active'", 
                         (username, password), one=True)
+        
         if user:
+            # 1. Save to session
             session["user"] = user["username"]
-            session["role"] = user["role"]
+            # Convert to string, strip spaces, and lowercase to be safe
+            user_role = str(user["role"]).strip().lower()
+            session["role"] = user_role
             
-            # Redirect based on role
-            role = str(user["role"]).strip().lower()
-            if role == "owner": return redirect(url_for("owner"))
-            if role == "hr": return redirect(url_for("hr"))
-            return redirect(url_for("logs"))
+            # 2. Add a debug print for Render Logs
+            print(f"DEBUG: Login successful for {username}. Role detected: {user_role}")
             
+            # 3. Use explicit redirects
+            if user_role == "owner":
+                return redirect(url_for("owner"))
+            elif user_role == "hr":
+                return redirect(url_for("hr"))
+            else:
+                return redirect(url_for("logs"))
+            
+        # If login fails
+        print(f"DEBUG: Login failed for username: {username}")
         flash("Authentication Failed", "error")
+        
     return render_template("login.html")
-
 @app.route("/logout")
 def logout():
     session.clear()
@@ -354,7 +367,7 @@ def init_production_db():
     except Exception as e:
         return f"❌ Setup Failed: {str(e)}"
     
-    
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
