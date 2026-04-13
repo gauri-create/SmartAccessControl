@@ -215,7 +215,6 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        # Use .strip() to remove any accidental spaces from the form
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
         
@@ -223,28 +222,31 @@ def login():
                         (username, password), one=True)
         
         if user:
-            # 1. Save to session
+            # 1. Clear any old session data
+            session.clear()
+            
+            # 2. Assign fresh session data
             session["user"] = user["username"]
-            # Convert to string, strip spaces, and lowercase to be safe
-            user_role = str(user["role"]).strip().lower()
-            session["role"] = user_role
+            # Ensure the role is a clean string
+            role_clean = str(user["role"]).strip().lower()
+            session["role"] = role_clean
             
-            # 2. Add a debug print for Render Logs
-            print(f"DEBUG: Login successful for {username}. Role detected: {user_role}")
+            # 3. Force Flask to save the session
+            session.modified = True
             
-            # 3. Use explicit redirects
-            if user_role == "owner":
+            print(f"DEBUG: Login Success. Redirecting role: {role_clean}")
+
+            if role_clean == "owner":
                 return redirect(url_for("owner"))
-            elif user_role == "hr":
+            elif role_clean == "hr":
                 return redirect(url_for("hr"))
             else:
                 return redirect(url_for("logs"))
-            
-        # If login fails
-        print(f"DEBUG: Login failed for username: {username}")
-        flash("Authentication Failed", "error")
         
+        flash("Authentication Failed", "error")
     return render_template("login.html")
+
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -253,17 +255,32 @@ def logout():
 
 @app.route("/owner")
 def owner():
-    if session.get("role") != "owner": return redirect(url_for("login"))
+    # 1. Get the role and clean it up immediately
+    raw_role = session.get("role")
+    current_role = str(raw_role).strip().lower() if raw_role else None
     
-    # Simple count queries
-    res_total = query_db("SELECT COUNT(*) as count FROM users", one=True)
-    res_active = query_db("SELECT COUNT(*) as count FROM users WHERE status = 'active'", one=True)
-    
-    total = res_total['count'] if res_total else 0
-    active = res_active['count'] if res_active else 0
-    
-    return render_template("owner.html", total_users=total, active_users=active)
+    # 2. Debugging: This will show up in your Render Logs
+    print(f"DEBUG: Accessing /owner. Session role found: [{raw_role}] -> Cleaned: [{current_role}]")
 
+    if current_role != "owner":
+        print("DEBUG: Access Denied. Redirecting to login.")
+        return redirect(url_for("login"))
+    
+    try:
+        # Simple count queries
+        res_total = query_db("SELECT COUNT(*) as count FROM users", one=True)
+        res_active = query_db("SELECT COUNT(*) as count FROM users WHERE status = 'active'", one=True)
+        
+        # PostgreSQL returns different types sometimes, so we ensure it's an int
+        total = res_total['count'] if res_total else 0
+        active = res_active['count'] if res_active else 0
+        
+        return render_template("owner.html", total_users=total, active_users=active)
+    
+    except Exception as e:
+        print(f"❌ Owner Route Error: {e}")
+        return "Internal Server Error", 500
+    
 
 @app.route("/logs")
 def logs():
