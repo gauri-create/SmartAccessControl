@@ -301,6 +301,60 @@ def update_user(user_id):
 
     return render_template("edit_user.html", user=target_user, current_role=current_role)
 
+
+
+@app.route("/init_production_db")
+def init_production_db():
+    if not IS_RENDER:
+        return "This is only for production setup!"
+    
+    try:
+        # 1. Create the Users Table if it doesn't exist
+        query_db("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                status TEXT DEFAULT 'active'
+            )
+        """)
+
+        # 2. Create the Logs Table
+        query_db("""
+            CREATE TABLE IF NOT EXISTS logs (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                status TEXT,
+                confidence FLOAT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # 3. Create the Unknown Subjects Table
+        query_db("""
+            CREATE TABLE IF NOT EXISTS unknown_subjects (
+                id SERIAL PRIMARY KEY,
+                temp_id TEXT UNIQUE,
+                last_image_path TEXT,
+                capture_count INTEGER,
+                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # 4. Insert YOUR login (Change 'gauri' and 'yourpassword' to what you want)
+        query_db("""
+            INSERT INTO users (username, name, password, role, status)
+            VALUES ('admin', 'Gauri Belokar', 'admin123', 'owner', 'active')
+            ON CONFLICT (username) DO NOTHING
+        """)
+
+        return "✅ Database tables created and Admin user 'admin' added! Try logging in now."
+    except Exception as e:
+        return f"❌ Setup Failed: {str(e)}"
+    
+    
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
